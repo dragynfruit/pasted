@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Pasted</title>
 </head>
 <body>
     <form action="/" method="post">
@@ -35,29 +35,29 @@
             <option value="23">Writing</option>
         </select>
         <input type="text" name="tags">
-        <select name="format" value="0">
-            <option value="0">None</option>
+        <select name="format" value="1">
+            <option value="1">None</option>
         </select>
         <select name="expiration" value="N">
             <option value="N">Never</option>
-            <option value="A">Burn after read</option>
-            <option value="B">10 Minutes</option>
-            <option value="C">1 Hour</option>
-            <option value="D">1 Day</option>
-            <option value="E">1 Week</option>
-            <option value="F">2 Weeks</option>
-            <option value="G">1 Month</option>
-            <option value="H">6 Months</option>
-            <option value="I">1 Year</option>
+            <option value="B">Burn after read</option>
+            <option value="10M">10 Minutes</option>
+            <option value="1H">1 Hour</option>
+            <option value="1D">1 Day</option>
+            <option value="1W">1 Week</option>
+            <option value="2W">2 Weeks</option>
+            <option value="1M">1 Month</option>
+            <option value="6M">6 Months</option>
+            <option value="1Y">1 Year</option>
         </select>
         <select name="exposure" value="0">
             <option value="0">Public</option>
             <option value="1">Unlisted</option>
+            <option value="2">Private</option>
         </select>
-        <!-- dropdown status -->
         <input type="text" name="password">
-        <input type="checkbox" name="burn">
         <input type="text" name="name">
+        <button type="submit">Submit</button>
     </form>
 </body>
 </html>
