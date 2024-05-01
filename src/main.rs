@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::Path,
     response::{IntoResponse, Response},
     routing, Form, Router,
 };
@@ -8,17 +8,12 @@ use cookie_store::CookieStore;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use serde_json::value::{to_value, Value};
-use std::{collections::HashMap, env};
+use std::env;
 use ureq::AgentBuilder;
 use ureq_multipart::MultipartBuilder;
+use base64::{Engine as _, engine};
 
 const URL: &str = "https://pastebin.com";
-
-pub fn do_nothing_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-    let s = tera::try_get_value!("do_nothing_filter", "value", String, value);
-    Ok(to_value(s).unwrap())
-}
 
 static TEMPLATES: Lazy<tera::Tera> = Lazy::new(|| {
     let mut tera = match tera::Tera::new("templates/*") {
@@ -29,7 +24,6 @@ static TEMPLATES: Lazy<tera::Tera> = Lazy::new(|| {
         }
     };
     tera.autoescape_on(vec![".html", ".sql"]);
-    tera.register_filter("do_nothing", do_nothing_filter);
     tera
 });
 
@@ -209,7 +203,7 @@ fn get_icon(agent: &ureq::Agent, url: &str) -> String {
         .into_reader()
         .read_to_end(&mut icon_data)
         .unwrap();
-    format!("data:image/jpg;base64,{}", base64::encode(icon_data))
+    format!("data:image/jpg;base64,{}", engine::general_purpose::STANDARD.encode(icon_data))
 }
 
 fn get_content(agent: &ureq::Agent, id: &str) -> String {
