@@ -1,8 +1,17 @@
-use axum::{body::Body, extract::Path, response::Response, routing, Form, Router};
-use serde::Deserialize;
-use serde_json::json;
+use axum::{
+    body::Body,
+    extract::{Path, State},
+    response::{IntoResponse, Response},
+    routing, Form, Router,
+};
+use cookie_store::CookieStore;
+use once_cell::sync::Lazy;
+use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 use serde_json::value::{to_value, Value};
 use std::{collections::HashMap, env};
+use ureq::AgentBuilder;
+use ureq_multipart::MultipartBuilder;
 
 const URL: &str = "https://pastebin.com";
 
@@ -11,20 +20,18 @@ pub fn do_nothing_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Res
     Ok(to_value(s).unwrap())
 }
 
-lazy_static::lazy_static! {
-    pub static ref TEMPLATES: tera::Tera = {
-        let mut tera = match tera::Tera::new("templates/*") {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Parsing error(s): {}", e);
-                ::std::process::exit(1);
-            }
-        };
-        tera.autoescape_on(vec![".html", ".sql"]);
-        tera.register_filter("do_nothing", do_nothing_filter);
-        tera
+static TEMPLATES: Lazy<tera::Tera> = Lazy::new(|| {
+    let mut tera = match tera::Tera::new("templates/*") {
+        Ok(t) => t,
+        Err(e) => {
+            println!("Parsing error(s): {}", e);
+            ::std::process::exit(1);
+        }
     };
-}
+    tera.autoescape_on(vec![".html", ".sql"]);
+    tera.register_filter("do_nothing", do_nothing_filter);
+    tera
+});
 
 #[derive(Deserialize)]
 struct Post {
@@ -38,13 +45,13 @@ struct Post {
     name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct User {
     username: String,
     icon: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Comment {
     author: User,
     text: String,
@@ -55,7 +62,7 @@ struct Comment {
     link: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Paste {
     author: User,
     content: String,
@@ -69,13 +76,14 @@ struct Paste {
     dislikes: u32,
     format: String,
     size: String,
+    category: String,
     comments: Vec<Comment>,
 }
 
 #[tokio::main]
 async fn main() {
-    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
-    let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = env::var("PORT").unwrap_or("3000".to_string());
+    let host = env::var("HOST").unwrap_or("0.0.0.0".to_string());
     let addr = format!("{}:{}", host, port);
 
     let app = Router::new()
@@ -97,64 +105,72 @@ async fn main() {
     println!("Shutting down");
 }
 
-async fn get_csrftoken(client: &reqwest::Client) -> String {
-    let main = client.get(URL.to_owned() + "/").send().await.unwrap();
-    let body = main.text().await.unwrap();
-    let dom = tl::parse(body.as_str(), tl::ParserOptions::default()).unwrap();
-    let parser = dom.parser();
-    dom.query_selector("meta[name=csrf-token]")
-        .unwrap()
-        .next()
-        .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .attributes()
-        .get("content")
-        .unwrap()
-        .unwrap()
-        .as_utf8_str()
-        .into_owned()
+fn get_body(agent: &ureq::Agent, url: String) -> String {
+    agent.get(&url).call().unwrap().into_string().unwrap()
 }
 
-async fn post(Form(data): Form<Post>) -> Response {
-    let client = reqwest::Client::builder()
-        .cookie_store(true)
-        .build()
-        .unwrap();
-    let csrf = get_csrftoken(&client).await;
+fn get_html(agent: &ureq::Agent, url: String) -> Html {
+    Html::parse_document(&get_body(agent, url))
+}
 
-    let form = reqwest::multipart::Form::new()
-        .text("_csrf-frontend", csrf)
-        .text("PostForm[text]", data.text)
-        .text("PostForm[category_id]", data.category.to_string())
-        .text("PostForm[tag]", data.tags)
-        .text("PostForm[format]", data.format.to_string())
-        .text("PostForm[expiration]", data.expiration.to_string())
-        .text("PostForm[status]", data.exposure.to_string())
-        .text(
+fn get_csrftoken(agent: &ureq::Agent) -> String {
+    let dom = get_html(agent, URL.to_owned() + "/");
+    let csrf = dom
+        .select(&Selector::parse("meta[name=csrf-token]").unwrap())
+        .next()
+        .unwrap()
+        .value()
+        .attr("content")
+        .unwrap()
+        .to_owned();
+    csrf
+}
+
+async fn post(Form(data): Form<Post>) -> impl IntoResponse {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .build();
+    let csrf = get_csrftoken(&agent);
+
+    let form = MultipartBuilder::new()
+        .add_text("_csrf-frontend", &csrf)
+        .unwrap()
+        .add_text("PostForm[text]", &data.text)
+        .unwrap()
+        .add_text("PostForm[category_id]", &data.category.to_string())
+        .unwrap()
+        .add_text("PostForm[tag]", &data.tags)
+        .unwrap()
+        .add_text("PostForm[format]", &data.format.to_string())
+        .unwrap()
+        .add_text("PostForm[expiration]", &data.expiration.to_string())
+        .unwrap()
+        .add_text("PostForm[status]", &data.exposure.to_string())
+        .unwrap()
+        .add_text(
             "PostForm[is_password_enabled]",
             if data.password.is_empty() { "0" } else { "1" },
         )
-        .text("PostForm[password]", data.password)
-        .text(
+        .unwrap()
+        .add_text("PostForm[password]", &data.password)
+        .unwrap()
+        .add_text(
             "PostForm[is_burn]",
             if data.expiration == 'B' { "1" } else { "0" },
         )
-        .text("PostForm[name]", data.name);
+        .unwrap()
+        .add_text("PostForm[name]", &data.name)
+        .unwrap()
+        .finish()
+        .unwrap();
 
-    let response = client
-        .post(URL.to_owned() + "/")
-        .multipart(form)
-        .send()
-        .await
+    let response = agent
+        .post(format!("{URL}/").as_str())
+        .set("Content-Type", &form.0)
+        .send_bytes(&form.1)
         .unwrap();
     let paste_id = response
-        .headers()
-        .get("Location")
-        .unwrap()
-        .to_str()
+        .header("Location")
         .unwrap()
         .split("/")
         .last()
@@ -172,7 +188,7 @@ async fn post(Form(data): Form<Post>) -> Response {
         .unwrap()
 }
 
-async fn index() -> Response {
+async fn index() -> impl IntoResponse {
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
@@ -184,150 +200,131 @@ async fn index() -> Response {
         .unwrap()
 }
 
-async fn get_icon(client: &reqwest::Client, url: &str) -> String {
-    let icon_data = client.get(url).send().await.unwrap().bytes().await.unwrap();
+fn get_icon(agent: &ureq::Agent, url: &str) -> String {
+    let mut icon_data = Vec::new();
+    agent
+        .get(url)
+        .call()
+        .unwrap()
+        .into_reader()
+        .read_to_end(&mut icon_data)
+        .unwrap();
     format!("data:image/jpg;base64,{}", base64::encode(icon_data))
 }
 
-async fn get_paste(client: &reqwest::Client, id: &str) -> Paste {
-    let paste_response = client.get(URL.to_owned() + "/" + id).send().await.unwrap();
-    let body = paste_response.text().await.unwrap();
-    let dom = tl::parse(body.as_str(), tl::ParserOptions::default()).unwrap();
-    let parser = dom.parser();
+fn get_content(agent: &ureq::Agent, id: &str) -> String {
+    get_body(agent, URL.to_owned() + "/raw/" + id)
+}
 
-    let username = dom.query_selector(".post-view>.details .username>a").unwrap().next().unwrap().get(parser).unwrap().as_tag().unwrap().inner_text(parser).into_owned();
-    let icon_url = dom.query_selector(".post-view>.details .user-icon>img").unwrap().next().unwrap().get(parser).unwrap().as_tag().unwrap().attributes().get("src").unwrap().unwrap().as_utf8_str().into_owned();
-    let icon = get_icon(client, &(URL.to_owned() + icon_url.as_str())).await;
+fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
+    let dom = get_html(agent, URL.to_owned() + "/" + id);
 
-    let author = User {
-        username: "a".to_owned(),
-        icon: "a".to_owned(),
-    };
-
-    let unlisted = dom.query_selector(".unlisted").is_some();
-    println!("{:?}", unlisted);
-    let content = dom
-        .query_selector(".-raw")
-        .unwrap()
+    let username = dom
+        .select(&Selector::parse(".post-view>.details .username>a").unwrap())
         .next()
         .unwrap()
-        .get(parser)
+        .text()
+        .collect::<String>();
+    let icon_url = dom
+        .select(&Selector::parse(".post-view>.details .user-icon>img").unwrap())
+        .next()
         .unwrap()
-        .as_tag()
+        .value()
+        .attr("src")
         .unwrap()
-        .inner_text(parser)
-        .into_owned();
+        .to_owned();
+    let icon = get_icon(agent, &(URL.to_owned() + icon_url.as_str()));
+
+    let author = User { username, icon };
+
+    let unlisted = dom
+        .select(&Selector::parse(".unlisted").unwrap())
+        .next()
+        .is_some();
     let title = dom
-        .query_selector("h1")
-        .unwrap()
+        .select(&Selector::parse("h1").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned();
+        .text()
+        .collect::<String>();
     let views = dom
-        .query_selector(".visits")
-        .unwrap()
+        .select(&Selector::parse(".visits").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned()
+        .text()
+        .collect::<String>()
+        .trim()
         .parse()
         .unwrap();
     let rating = dom
-        .query_selector(".rating")
-        .unwrap()
+        .select(&Selector::parse(".rating").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned()
+        .text()
+        .collect::<String>()
+        .trim()
         .parse()
         .unwrap();
     let date = dom
-        .query_selector(".date")
-        .unwrap()
+        .select(&Selector::parse(".date").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .attributes()
-        .get("title")
-        .unwrap()
-        .unwrap()
-        .as_utf8_str()
-        .into_owned();
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
     let expiration = dom
-        .query_selector(".expire")
-        .unwrap()
+        .select(&Selector::parse(".expire").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned();
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
     let likes = dom
-        .query_selector(".-like")
-        .unwrap()
+        .select(&Selector::parse(".-like").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned()
+        .text()
+        .collect::<String>()
+        .trim()
         .parse()
         .unwrap();
     let dislikes = dom
-        .query_selector(".-dislike")
-        .unwrap()
+        .select(&Selector::parse(".-dislike").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned()
+        .text()
+        .collect::<String>()
+        .trim()
         .parse()
         .unwrap();
     let format = dom
-        .query_selector("a.btn.-small.h_800")
-        .unwrap()
+        .select(&Selector::parse("a.btn.-small.h_800").unwrap())
         .next()
         .unwrap()
-        .get(parser)
-        .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned();
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
     let size = dom
-        .query_selector(".left")
-        .unwrap()
+        .select(&Selector::parse(".left").unwrap())
         .next()
         .unwrap()
-        .get(parser)
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
+    let category = dom
+        .select(&Selector::parse(".left > span:nth-child(2)").unwrap())
+        .next()
         .unwrap()
-        .as_tag()
-        .unwrap()
-        .inner_text(parser)
-        .into_owned();
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
+
+    let content = get_content(agent, id);
 
     Paste {
         author,
@@ -342,29 +339,26 @@ async fn get_paste(client: &reqwest::Client, id: &str) -> Paste {
         expiration,
         format,
         size,
+        category,
         comments: vec![],
     }
 }
 
-async fn view(Path(id): Path<String>) -> Response {
-    let client = reqwest::Client::builder()
-        .cookie_store(true)
-        .build()
-        .unwrap();
-    let paste = get_paste(&client, &id).await;
+async fn view(Path(id): Path<String>) -> impl IntoResponse {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .build();
+    let paste = get_paste(&agent, &id);
 
     // get all the data
-
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
-        .body(Body::new(
+        .body(Body::from(
             TEMPLATES
-                .render(
-                    "view.html",
-                    &tera::Context::from_value(json!({ "content": paste.content })).unwrap(),
-                )
+                .render("view.html", &tera::Context::from_serialize(paste).unwrap())
                 .unwrap(),
         ))
         .unwrap()
+        .into_response()
 }
