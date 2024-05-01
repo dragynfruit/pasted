@@ -1,10 +1,8 @@
-use axum::{
-    body::Body, extract::Path, response::Response, routing, Form, Router
-};
+use axum::{body::Body, extract::Path, response::Response, routing, Form, Router};
 use serde::Deserialize;
+use serde_json::json;
 use serde_json::value::{to_value, Value};
 use std::{collections::HashMap, env};
-use serde_json::json;
 
 const URL: &str = "https://pastebin.com";
 
@@ -29,7 +27,7 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Deserialize)]
-struct Paste {
+struct Post {
     text: String,
     category: u8,
     tags: String,
@@ -38,6 +36,40 @@ struct Paste {
     exposure: u8,
     password: String,
     name: String,
+}
+
+#[derive(Deserialize)]
+struct User {
+    username: String,
+    icon: String,
+}
+
+#[derive(Deserialize)]
+struct Comment {
+    author: User,
+    text: String,
+    date: String,
+    likes: u32,
+    dislikes: u32,
+    format: String,
+    link: String,
+}
+
+#[derive(Deserialize)]
+struct Paste {
+    author: User,
+    content: String,
+    unlisted: bool,
+    title: String,
+    views: u32,
+    rating: u32,
+    date: String,
+    expiration: String,
+    likes: u32,
+    dislikes: u32,
+    format: String,
+    size: String,
+    comments: Vec<Comment>,
 }
 
 #[tokio::main]
@@ -86,8 +118,11 @@ async fn get_csrftoken(client: &reqwest::Client) -> String {
         .into_owned()
 }
 
-async fn post(Form(data): Form<Paste>) -> Response {
-    let client = reqwest::Client::builder().cookie_store(true).build().unwrap();
+async fn post(Form(data): Form<Post>) -> Response {
+    let client = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     let csrf = get_csrftoken(&client).await;
 
     let form = reqwest::multipart::Form::new()
@@ -115,7 +150,15 @@ async fn post(Form(data): Form<Paste>) -> Response {
         .send()
         .await
         .unwrap();
-    let paste_id = response.headers().get("Location").unwrap().to_str().unwrap().split("/").last().unwrap();
+    let paste_id = response
+        .headers()
+        .get("Location")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split("/")
+        .last()
+        .unwrap();
 
     Response::builder()
         .status(response.status())
@@ -141,17 +184,186 @@ async fn index() -> Response {
         .unwrap()
 }
 
+async fn get_icon(client: &reqwest::Client, url: &str) -> String {
+    let icon_data = client.get(url).send().await.unwrap().bytes().await.unwrap();
+    format!("data:image/jpg;base64,{}", base64::encode(icon_data))
+}
+
+async fn get_paste(client: &reqwest::Client, id: &str) -> Paste {
+    let paste_response = client.get(URL.to_owned() + "/" + id).send().await.unwrap();
+    let body = paste_response.text().await.unwrap();
+    let dom = tl::parse(body.as_str(), tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let username = dom.query_selector(".post-view>.details .username>a").unwrap().next().unwrap().get(parser).unwrap().as_tag().unwrap().inner_text(parser).into_owned();
+    let icon_url = dom.query_selector(".post-view>.details .user-icon>img").unwrap().next().unwrap().get(parser).unwrap().as_tag().unwrap().attributes().get("src").unwrap().unwrap().as_utf8_str().into_owned();
+    let icon = get_icon(client, &(URL.to_owned() + icon_url.as_str())).await;
+
+    let author = User {
+        username: "a".to_owned(),
+        icon: "a".to_owned(),
+    };
+
+    let unlisted = dom.query_selector(".unlisted").is_some();
+    println!("{:?}", unlisted);
+    let content = dom
+        .query_selector(".-raw")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned();
+    let title = dom
+        .query_selector("h1")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned();
+    let views = dom
+        .query_selector(".visits")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned()
+        .parse()
+        .unwrap();
+    let rating = dom
+        .query_selector(".rating")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned()
+        .parse()
+        .unwrap();
+    let date = dom
+        .query_selector(".date")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .attributes()
+        .get("title")
+        .unwrap()
+        .unwrap()
+        .as_utf8_str()
+        .into_owned();
+    let expiration = dom
+        .query_selector(".expire")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned();
+    let likes = dom
+        .query_selector(".-like")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned()
+        .parse()
+        .unwrap();
+    let dislikes = dom
+        .query_selector(".-dislike")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned()
+        .parse()
+        .unwrap();
+    let format = dom
+        .query_selector("a.btn.-small.h_800")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned();
+    let size = dom
+        .query_selector(".left")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap()
+        .as_tag()
+        .unwrap()
+        .inner_text(parser)
+        .into_owned();
+
+    Paste {
+        author,
+        content,
+        unlisted,
+        title,
+        views,
+        rating,
+        date,
+        likes,
+        dislikes,
+        expiration,
+        format,
+        size,
+        comments: vec![],
+    }
+}
+
 async fn view(Path(id): Path<String>) -> Response {
-    let client = reqwest::Client::builder().cookie_store(true).build().unwrap();
-    let response = client.get(URL.to_owned() + "/raw/" + &id).send().await.unwrap();
-    let content = response.text().await.unwrap();
+    let client = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
+    let paste = get_paste(&client, &id).await;
+
+    // get all the data
 
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
         .body(Body::new(
             TEMPLATES
-                .render("view.html", &tera::Context::from_value(json!({ "content": content })).unwrap())
+                .render(
+                    "view.html",
+                    &tera::Context::from_value(json!({ "content": paste.content })).unwrap(),
+                )
                 .unwrap(),
         ))
         .unwrap()
