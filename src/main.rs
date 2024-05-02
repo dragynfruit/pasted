@@ -33,7 +33,7 @@ struct Post {
     category: u8,
     tags: String,
     format: u8,
-    expiration: char,
+    expiration: String,
     exposure: u8,
     password: String,
     name: String,
@@ -140,6 +140,7 @@ fn get_csrftoken(agent: &ureq::Agent) -> String {
 async fn post(Form(data): Form<Post>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
         .cookie_store(CookieStore::default())
+        .redirects(0)
         .build();
     let csrf = get_csrftoken(&agent);
 
@@ -167,10 +168,12 @@ async fn post(Form(data): Form<Post>) -> impl IntoResponse {
         .unwrap()
         .add_text(
             "PostForm[is_burn]",
-            if data.expiration == 'B' { "1" } else { "0" },
+            if data.expiration == "B" { "1" } else { "0" },
         )
         .unwrap()
         .add_text("PostForm[name]", &data.name)
+        .unwrap()
+        .add_text("PostForm[is_guest]", "1")
         .unwrap()
         .finish()
         .unwrap();
@@ -234,7 +237,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
     let dom = get_html(agent, format!("{URL}/{id}").as_str());
 
     let username = dom
-        .select(&Selector::parse(".post-view>.details .username>a").unwrap())
+        .select(&Selector::parse(".post-view>.details .username").unwrap())
         .next()
         .unwrap()
         .text()
@@ -375,6 +378,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
 async fn view(Path(id): Path<String>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
         .cookie_store(CookieStore::default())
+        .redirects(0)
         .build();
     let paste = get_paste(&agent, &id);
 
