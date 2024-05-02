@@ -1,28 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View | Pasted</title>
-
-    <style>
-        html,
-        body {
-            font-family: Arial, sans-serif;
-        }
-
-        textarea {
-            width: 50%;
-            height: 100vh;
-        }
-    </style>
-</head>
-
-<body>
-    <h1>{{ title }}</h1>
-    <img src="{{ author.icon }}">
-    <textarea>{{ content }}</textarea>
-</body>
-
-</html>
+{% extends "base.html" %}
+{% block title %}View{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+    /* make header 1 line */
+</style>
+{% endblock head %}
+{% block content %}
+    <div id="paste">
+        <div id="header">
+            <h2>{{ title }}</h2>
+            <span>{{ date }}</span> |
+            <span>{{ category }}</span> |
+            <span>{{ format }}</span> |
+            <span>{{ size }}</span> |
+            <span>{{ likes }} likes / {{ dislikes }} dislikes</span> |
+            <span>{{ rating }} rating </span> |
+            <span>{{ views }} views</span> |
+            <span>expires {{ expiration }}</span>
+        </div>
+        <div id="text">
+            <pre>{{ content }}</pre>
+        </div>
+    </div>
+{% endblock content %}

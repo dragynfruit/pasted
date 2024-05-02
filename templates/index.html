@@ -1,61 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block title %}Home{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+    #post {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pasted</title>
-    <style>
-        html,
-        body {
-            font-family: Arial, sans-serif;
+    @media screen and (max-width: 600px) {
+        #post {
+            grid-template-columns: 1fr;
         }
 
-        form {
-            display: flex;
-            flex-direction: column;
-            width: 50%;
-            margin: 0 auto;
+        #left {
+            height: 15rem;
         }
+    }
 
-        label {
-            margin-top: 1rem;
-        }
+    #post > * {
+        display: grid;
+        grid-template-rows: 1fr;
+    }
 
-        textarea {
-            height: 10rem;
-            margin-top: 0.5rem;
-            resize: none;
-        }
+    #post label {
+        margin-top: 1rem;
+    }
 
-        input {
-            margin-top: 0.5rem;
-        }
+    #post textarea {
+        height: 100%;
+        margin-top: 0.5rem;
+        resize: none;
+    }
 
-        select {
-            margin-top: 0.5rem;
-        }
+    #post input {
+        margin-top: 0.5rem;
+    }
 
-        button {
-            margin-top: 1rem;
-            padding: 0.5rem;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
+    #post select {
+        margin-top: 0.5rem;
+    }
 
-        button:hover {
-            background-color: #0056b3;
-        }
-    </style>
-</head>
-
-<body>
-    <h1>Pasted</h1>
-    <form action="/" method="post">
-        <label for="text">Text</label>
-        <textarea name="text" placeholder="Text"></textarea>
+    #post button {
+        margin-top: 1rem;
+    }
+</style>
+{% endblock head %}
+{% block content %}
+<form action="/" method="post" id="post">
+    <div id="left">
+        <textarea name="text" placeholder="Enter paste here"></textarea>
+    </div>
+    <div id="right">
         <label for="category">Category</label>
         <select name="category" value="0">
             <option value="0">None</option>
@@ -106,14 +104,13 @@
         <select name="exposure" value="0">
             <option value="0">Public</option>
             <option value="1">Unlisted</option>
-            <option value="2">Private</option>
+            <option value="2" disabled>Private</option>
         </select>
         <label for="password">Password</label>
         <input type="password" name="password" placeholder="Password">
         <label for="name">Name</label>
         <input type="text" name="name" placeholder="Name">
         <button type="submit">Submit</button>
-    </form>
-</body>
-
-</html>
+    </div>
+</form>
+{% endblock content %}

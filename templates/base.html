@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock title %} - Pasted</title>
+    {% endblock head %}
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #4ca8f8;
+            --background-primary-color: #f8f9fa;
+            --background-secondary-color: #cbcbcb;
+            --text-color: #333;
+        }
+
+        /* dark */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #007bff;
+                --secondary-color: #4ca8f8;
+                --background-primary-color: #121212;
+                --background-secondary-color: #333;
+                --text-color: #f8f9fa;
+            }
+        }
+
+        html,
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-primary-color);
+            color: var(--text-color);
+        }
+
+        #nav {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            background-color: var(--background-secondary-color);
+        }
+
+        #nav > h1 {
+            margin-top: 1rem;
+            margin-left: 1rem;
+        }
+
+        #nav > h1 > a {
+            text-decoration: none;
+            color: var(--primary-color);
+        }
+
+        #search > input {
+            background-color: var(--background-primary-color);
+        }
+
+        input {
+            padding: 0.5rem;
+            border: 0;
+            background-color: var(--background-secondary-color);
+            color: var(--text-color);
+            outline: transparent;
+        }
+
+        textarea {
+            padding: 0.5rem;
+            border: 0;
+            background-color: var(--background-secondary-color);
+            color: var(--text-color);
+            resize: none;
+            outline: transparent;
+        }
+
+        button {
+            padding: 0.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        select {
+            background-color: var(--background-secondary-color);
+            color: var(--text-color);
+            border: 0;
+            padding: 0.5rem;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--primary-color);
+        }
+
+        #search {
+            margin-top: 1rem;
+            margin-right: 1rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+        }
+
+        #footer {
+            margin-top: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav">
+        <h1><a href="/">Pasted</a></h1>
+        <form action="/search" method="get" id="search">
+            <input type="text" name="q" placeholder="Search">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+    <div id="content">{% block content %}{% endblock content %}</div>
+    <div id="footer">
+        {% block footer %}
+        Made by <a href="https://github.com/drakeerv">drakeerv</a>
+        {% endblock footer %}
+    </div>
+</body>
+
+</html>

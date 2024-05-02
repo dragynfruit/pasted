@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing, Form, Router,
 };
+use base64::{engine, Engine as _};
 use cookie_store::CookieStore;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
@@ -11,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use ureq::AgentBuilder;
 use ureq_multipart::MultipartBuilder;
-use base64::{Engine as _, engine};
 
 const URL: &str = "https://pastebin.com";
 
@@ -39,13 +39,13 @@ struct Post {
     name: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct User {
     username: String,
     icon: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Comment {
     author: User,
     text: String,
@@ -56,7 +56,7 @@ struct Comment {
     link: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Paste {
     author: User,
     content: String,
@@ -82,6 +82,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", routing::get(index).post(post))
+        .route("/favicon.ico", routing::get(favicon))
         .route("/:id", routing::get(view));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -99,16 +100,32 @@ async fn main() {
     println!("Shutting down");
 }
 
-fn get_body(agent: &ureq::Agent, url: String) -> String {
+/*
+    Favicon
+*/
+
+async fn favicon() -> impl IntoResponse {
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "image/x-icon")
+        .body(Body::from(include_bytes!("favicon.ico").to_vec()))
+        .unwrap()
+}
+
+/*
+    Make Post
+*/
+
+fn get_body(agent: &ureq::Agent, url: &str) -> String {
     agent.get(&url).call().unwrap().into_string().unwrap()
 }
 
-fn get_html(agent: &ureq::Agent, url: String) -> Html {
+fn get_html(agent: &ureq::Agent, url: &str) -> Html {
     Html::parse_document(&get_body(agent, url))
 }
 
 fn get_csrftoken(agent: &ureq::Agent) -> String {
-    let dom = get_html(agent, URL.to_owned() + "/");
+    let dom = get_html(agent, format!("{}/", URL).as_str());
     let csrf = dom
         .select(&Selector::parse("meta[name=csrf-token]").unwrap())
         .next()
@@ -172,7 +189,7 @@ async fn post(Form(data): Form<Post>) -> impl IntoResponse {
 
     Response::builder()
         .status(response.status())
-        .header("Location", format!("/{}", paste_id))
+        .header("Location", format!("/{paste_id}"))
         .header("Content-Type", "text/html")
         .body(Body::new(
             TEMPLATES
@@ -194,6 +211,10 @@ async fn index() -> impl IntoResponse {
         .unwrap()
 }
 
+/*
+    View Paste
+*/
+
 fn get_icon(agent: &ureq::Agent, url: &str) -> String {
     let mut icon_data = Vec::new();
     agent
@@ -203,15 +224,14 @@ fn get_icon(agent: &ureq::Agent, url: &str) -> String {
         .into_reader()
         .read_to_end(&mut icon_data)
         .unwrap();
-    format!("data:image/jpg;base64,{}", engine::general_purpose::STANDARD.encode(icon_data))
-}
-
-fn get_content(agent: &ureq::Agent, id: &str) -> String {
-    get_body(agent, URL.to_owned() + "/raw/" + id)
+    format!(
+        "data:image/jpg;base64,{}",
+        engine::general_purpose::STANDARD.encode(icon_data)
+    )
 }
 
 fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
-    let dom = get_html(agent, URL.to_owned() + "/" + id);
+    let dom = get_html(agent, format!("{URL}/{id}").as_str());
 
     let username = dom
         .select(&Selector::parse(".post-view>.details .username>a").unwrap())
@@ -308,6 +328,12 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .text()
         .collect::<String>()
         .trim()
+        .split_once(" ")
+        .unwrap()
+        .1
+        .split_once("\n")
+        .unwrap()
+        .0
         .to_owned();
     let category = dom
         .select(&Selector::parse(".left > span:nth-child(2)").unwrap())
@@ -316,9 +342,17 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .text()
         .collect::<String>()
         .trim()
+        .split_once(" ")
+        .unwrap()
+        .1
         .to_owned();
-
-    let content = get_content(agent, id);
+    let content = dom
+        .select(&Selector::parse(".source > ol").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .to_owned();
 
     Paste {
         author,
