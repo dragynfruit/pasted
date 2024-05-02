@@ -32,7 +32,7 @@ struct Post {
     text: String,
     category: u8,
     tags: String,
-    format: u8,
+    format: u16,
     expiration: String,
     exposure: u8,
     password: String,
