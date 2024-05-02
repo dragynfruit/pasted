@@ -39,39 +39,57 @@ struct Post {
     name: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-struct User {
+#[derive(Deserialize, Serialize)]
+struct BasicUser {
     username: String,
     icon: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-struct Comment {
-    author: User,
-    text: String,
+#[derive(Deserialize, Serialize)]
+struct User {
+    user: BasicUser,
+    pastes: Vec<PasteInfo>,
+    views: u64,
+    rating: f32,
     date: String,
-    likes: u32,
-    dislikes: u32,
-    format: String,
-    link: String,
+    website: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-struct Paste {
-    author: User,
-    content: String,
-    unlisted: bool,
+#[derive(Deserialize, Serialize)]
+struct PasteInfo {
     title: String,
-    views: u32,
-    rating: u32,
+    views: u64,
     date: String,
     expiration: String,
+    comments: u64,
+    format: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct PasteData {
+    content: String,
     likes: u32,
     dislikes: u32,
-    format: String,
     size: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Comment {
+    author: BasicUser,
+    data: PasteData,
+    date: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Paste {
+    author: BasicUser,
+    info: PasteInfo,
+    data: PasteData,
+    unlisted: bool,
+    rating: f32,
     category: String,
     comments: Vec<Comment>,
+    tags: Vec<String>,
 }
 
 #[tokio::main]
@@ -252,18 +270,15 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .to_owned();
     let icon = get_icon(agent, &(URL.to_owned() + icon_url.as_str()));
 
-    let author = User { username, icon };
+    let author = BasicUser { username, icon };
 
-    let unlisted = dom
-        .select(&Selector::parse(".unlisted").unwrap())
-        .next()
-        .is_some();
     let title = dom
         .select(&Selector::parse("h1").unwrap())
         .next()
         .unwrap()
         .text()
         .collect::<String>();
+
     let views = dom
         .select(&Selector::parse(".visits").unwrap())
         .next()
@@ -273,6 +288,47 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .trim()
         .parse()
         .unwrap();
+
+    let date = dom
+        .select(&Selector::parse(".date").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
+
+    let expiration = dom
+        .select(&Selector::parse(".expire").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
+
+    let format = dom
+        .select(&Selector::parse("a.btn.-small.h_800").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
+
+    let info = PasteInfo {
+        title,
+        views,
+        date,
+        expiration,
+        comments: 0,
+        format,
+    };
+
+    let unlisted = dom
+        .select(&Selector::parse(".unlisted").unwrap())
+        .next()
+        .is_some();
     let rating = dom
         .select(&Selector::parse(".rating").unwrap())
         .next()
@@ -282,22 +338,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .trim()
         .parse()
         .unwrap();
-    let date = dom
-        .select(&Selector::parse(".date").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .to_owned();
-    let expiration = dom
-        .select(&Selector::parse(".expire").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .to_owned();
     let likes = dom
         .select(&Selector::parse(".-like").unwrap())
         .next()
@@ -316,14 +356,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .trim()
         .parse()
         .unwrap();
-    let format = dom
-        .select(&Selector::parse("a.btn.-small.h_800").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .to_owned();
     let size = dom
         .select(&Selector::parse(".left").unwrap())
         .next()
@@ -357,21 +389,23 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .collect::<String>()
         .to_owned();
 
+    let tags = dom
+        .select(&Selector::parse(".tags > a").unwrap())
+        .map(|el| el.text().collect::<String>().to_owned())
+        .collect::<Vec<String>>();
+
     Paste {
         author,
+        info,
         content,
         unlisted,
-        title,
-        views,
         rating,
-        date,
         likes,
         dislikes,
-        expiration,
-        format,
         size,
         category,
         comments: vec![],
+        tags,
     }
 }
 

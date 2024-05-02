@@ -9,15 +9,16 @@
 {% block content %}
     <div id="paste">
         <div id="header">
-            <h2>{{ title }}</h2>
-            <span>{{ date }}</span> |
+            <h2>{{ info.title }}</h2>
+            <span>{{ info.date }}</span> |
             <span>{{ category }}</span> |
-            <span>{{ format }}</span> |
+            <span>{{ info.format }}</span> |
             <span>{{ size }}</span> |
             <span>{{ likes }} likes / {{ dislikes }} dislikes</span> |
             <span>{{ rating }} rating </span> |
-            <span>{{ views }} views</span> |
-            <span>expires {{ expiration }}</span>
+            <span>{{ info.views }} views</span> |
+            <span>expires {{ info.expiration }}</span> |
+            <span>{{ tags }}</span>
         </div>
         <div id="text">
             <pre>{{ content }}</pre>
