@@ -61,7 +61,7 @@ struct PasteInfo {
     views: u64,
     date: String,
     expiration: String,
-    comments: u64,
+    num_comments: u64,
     format: String,
 }
 
@@ -321,23 +321,17 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         views,
         date,
         expiration,
-        comments: 0,
+        num_comments: 0,
         format,
     };
 
-    let unlisted = dom
-        .select(&Selector::parse(".unlisted").unwrap())
-        .next()
-        .is_some();
-    let rating = dom
-        .select(&Selector::parse(".rating").unwrap())
+    let content = dom
+        .select(&Selector::parse(".source > ol").unwrap())
         .next()
         .unwrap()
         .text()
         .collect::<String>()
-        .trim()
-        .parse()
-        .unwrap();
+        .to_owned();
     let likes = dom
         .select(&Selector::parse(".-like").unwrap())
         .next()
@@ -370,6 +364,27 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .unwrap()
         .0
         .to_owned();
+
+    let data = PasteData {
+        content,
+        likes,
+        dislikes,
+        size,
+    };
+
+    let unlisted = dom
+        .select(&Selector::parse(".unlisted").unwrap())
+        .next()
+        .is_some();
+    let rating = dom
+        .select(&Selector::parse(".rating").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .parse()
+        .unwrap();
     let category = dom
         .select(&Selector::parse(".left > span:nth-child(2)").unwrap())
         .next()
@@ -381,14 +396,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .unwrap()
         .1
         .to_owned();
-    let content = dom
-        .select(&Selector::parse(".source > ol").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .to_owned();
-
     let tags = dom
         .select(&Selector::parse(".tags > a").unwrap())
         .map(|el| el.text().collect::<String>().to_owned())
@@ -397,12 +404,9 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
     Paste {
         author,
         info,
-        content,
+        data,
         unlisted,
         rating,
-        likes,
-        dislikes,
-        size,
         category,
         comments: vec![],
         tags,

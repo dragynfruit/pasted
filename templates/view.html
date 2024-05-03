@@ -13,15 +13,15 @@
             <span>{{ info.date }}</span> |
             <span>{{ category }}</span> |
             <span>{{ info.format }}</span> |
-            <span>{{ size }}</span> |
-            <span>{{ likes }} likes / {{ dislikes }} dislikes</span> |
+            <span>{{ data.size }}</span> |
+            <span>{{ data.likes }} likes / {{ data.dislikes }} dislikes</span> |
             <span>{{ rating }} rating </span> |
             <span>{{ info.views }} views</span> |
             <span>expires {{ info.expiration }}</span> |
             <span>{{ tags }}</span>
         </div>
         <div id="text">
-            <pre>{{ content }}</pre>
+            <pre>{{ data.content }}</pre>
         </div>
     </div>
 {% endblock content %}
