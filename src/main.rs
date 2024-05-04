@@ -42,6 +42,7 @@ struct Post {
 #[derive(Deserialize, Serialize)]
 struct BasicUser {
     username: String,
+    registered: bool,
     icon: String,
 }
 
@@ -67,6 +68,7 @@ struct PasteInfo {
 
 #[derive(Deserialize, Serialize)]
 struct PasteData {
+    author: BasicUser,
     content: String,
     likes: u32,
     dislikes: u32,
@@ -75,14 +77,12 @@ struct PasteData {
 
 #[derive(Deserialize, Serialize)]
 struct Comment {
-    author: BasicUser,
     data: PasteData,
     date: String,
 }
 
 #[derive(Deserialize, Serialize)]
 struct Paste {
-    author: BasicUser,
     info: PasteInfo,
     data: PasteData,
     unlisted: bool,
@@ -260,6 +260,10 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .unwrap()
         .text()
         .collect::<String>();
+    let registered = dom
+        .select(&Selector::parse(".post-view>.details .username>.a").unwrap())
+        .next()
+        .is_some();
     let icon_url = dom
         .select(&Selector::parse(".post-view>.details .user-icon>img").unwrap())
         .next()
@@ -270,7 +274,11 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .to_owned();
     let icon = get_icon(agent, &(URL.to_owned() + icon_url.as_str()));
 
-    let author = BasicUser { username, icon };
+    let author = BasicUser {
+        username,
+        registered,
+        icon,
+    };
 
     let title = dom
         .select(&Selector::parse("h1").unwrap())
@@ -366,6 +374,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .to_owned();
 
     let data = PasteData {
+        author,
         content,
         likes,
         dislikes,
@@ -402,7 +411,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .collect::<Vec<String>>();
 
     Paste {
-        author,
         info,
         data,
         unlisted,
