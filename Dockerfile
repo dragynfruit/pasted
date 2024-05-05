@@ -8,7 +8,8 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim
 
-COPY --from=builder /usr/src/pasted/target/release/pasted /usr/local/bin/pasted
+COPY --from=builder /usr/src/pasted/target/release/pasted /usr/local/bin/pasted/pasted
+COPY --from=builder /usr/src/pasted/teamplates /usr/local/bin/pasted/teamplates
 
 WORKDIR /usr/local/bin/
 CMD ["./pasted"]

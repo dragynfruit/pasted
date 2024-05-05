@@ -9,7 +9,7 @@ use cookie_store::CookieStore;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::env;
+use std::{env, process};
 use ureq::AgentBuilder;
 use ureq_multipart::MultipartBuilder;
 
@@ -20,7 +20,7 @@ static TEMPLATES: Lazy<tera::Tera> = Lazy::new(|| {
         Ok(t) => t,
         Err(e) => {
             println!("Parsing error(s): {}", e);
-            ::std::process::exit(1);
+            process::exit(1);
         }
     };
     tera.autoescape_on(vec![".html", ".sql"]);
