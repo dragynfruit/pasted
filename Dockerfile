@@ -10,7 +10,6 @@ FROM debian:bookworm-slim
 
 COPY --from=builder /usr/src/pasted/target/release/pasted /usr/local/bin/pasted/pasted
 COPY --from=builder /usr/src/pasted/templates /usr/local/bin/pasted/templates
-RUN chmod +x /usr/local/bin/pasted/pasted
 
-WORKDIR /usr/local/bin/
+WORKDIR /usr/local/bin/pasted
 CMD ["./pasted"]
