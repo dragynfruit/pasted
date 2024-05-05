@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Info{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+    #info {
+        margin: 0 auto;
+        width: 50%;
+        border-collapse: collapse;
+        border: 2px solid black;
+    }
+
+    #info td {
+        border: 1px solid black;
+        padding: 5px;
+    }
+</style>
+{% endblock head %}
+{% block content %}
+    <table id="info">
+        <tr>
+            <td colspan="2"><h2>Instance Info</h2></td>
+        </tr>
+        <tr>
+            <td>Name</td>
+            <td>{{ name }}</td>
+        </tr>
+        <tr>
+            <td>Version</td>
+            <td>{{ version }}</td>
+        </tr>
+        <tr>
+            <td>Start Time</td>
+            <td>{{ start_time }}</td>
+        </tr>
+    </table>
+{% endblock content %}

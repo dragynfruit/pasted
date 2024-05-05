@@ -2,14 +2,14 @@ use axum::{
     body::Body,
     extract::Path,
     response::{IntoResponse, Response},
-    routing, Form, Router,
+    routing, Form, Router, Json,
 };
 use base64::{engine, Engine as _};
 use cookie_store::CookieStore;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::{env, process};
+use std::{env, process, time};
 use ureq::AgentBuilder;
 use ureq_multipart::MultipartBuilder;
 
@@ -25,6 +25,25 @@ static TEMPLATES: Lazy<tera::Tera> = Lazy::new(|| {
     };
     tera.autoescape_on(vec![".html", ".sql"]);
     tera
+});
+
+#[derive(Deserialize, Serialize, Clone)]
+struct InstanceInfo {
+    version: String,
+    name: String,
+    start_time: String,
+}
+
+static INSTANCE_INFO: Lazy<InstanceInfo> = Lazy::new(|| {
+    InstanceInfo {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        name: env!("CARGO_PKG_NAME").to_string(),
+        start_time: time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .to_string(),
+    }
 });
 
 #[derive(Deserialize)]
@@ -100,6 +119,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/", routing::get(index).post(post))
+        .route("/info", routing::get(info))
+        .route("/info.json", routing::get(info_raw))
         .route("/favicon.ico", routing::get(favicon))
         .route("/:id", routing::get(view));
 
@@ -128,6 +149,26 @@ async fn favicon() -> impl IntoResponse {
         .header("Content-Type", "image/x-icon")
         .body(Body::from(include_bytes!("favicon.ico").to_vec()))
         .unwrap()
+}
+
+/*
+    Info
+*/
+
+async fn info() -> impl IntoResponse {
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/html")
+        .body(Body::new(
+            TEMPLATES
+                .render("info.html", &tera::Context::from_serialize(&*INSTANCE_INFO).unwrap())
+                .unwrap(),
+        ))
+        .unwrap()
+}
+
+async fn info_raw() -> Json<InstanceInfo> {
+    Json(INSTANCE_INFO.clone())
 }
 
 /*
