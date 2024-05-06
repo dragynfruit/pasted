@@ -935,10 +935,9 @@ dependencies = [
 
 [[package]]
 name = "pasted"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "axum",
- "base64",
  "cookie_store",
  "once_cell",
  "scraper",

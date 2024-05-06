@@ -10,8 +10,8 @@
 
     <style>
         :root {
-            --primary-color: #007bff;
-            --secondary-color: #4ca8f8;
+            --primary-color: #b400d8;
+            --secondary-color: #7a00a3;
             --background-primary-color: #f8f9fa;
             --background-secondary-color: #cbcbcb;
             --text-color: #333;
@@ -20,8 +20,6 @@
         /* dark */
         @media (prefers-color-scheme: dark) {
             :root {
-                --primary-color: #007bff;
-                --secondary-color: #4ca8f8;
                 --background-primary-color: #121212;
                 --background-secondary-color: #333;
                 --text-color: #f8f9fa;
@@ -33,6 +31,8 @@
             font-family: Arial, sans-serif;
             background-color: var(--background-primary-color);
             color: var(--text-color);
+            padding: 0;
+            margin: 0;
         }
 
         #nav {
@@ -50,10 +50,6 @@
         #nav > h1 > a {
             text-decoration: none;
             color: var(--primary-color);
-        }
-
-        #search > input {
-            background-color: var(--background-primary-color);
         }
 
         input {
@@ -97,17 +93,14 @@
             color: var(--primary-color);
         }
 
-        #search {
-            margin-top: 1rem;
-            margin-right: 1rem;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: center;
+        #content {
+            margin-bottom: 0.5rem;
         }
 
         #footer {
-            margin-top: 1rem;
+            padding: 0.5rem;
             text-align: center;
+            background-color: var(--background-secondary-color);
         }
     </style>
 </head>
@@ -115,15 +108,11 @@
 <body>
     <div id="nav">
         <h1><a href="/">Pasted</a></h1>
-        <form action="/search" method="get" id="search">
-            <input type="text" name="q" placeholder="Search">
-            <button type="submit">Search</button>
-        </form>
     </div>
     <div id="content">{% block content %}{% endblock content %}</div>
     <div id="footer">
         {% block footer %}
-        Made by <a href="https://github.com/drakeerv">drakeerv</a>. <a href="/info">Instance Info</a>.
+        Made by <a href="https://github.com/drakeerv">drakeerv</a> - <a href="/info">Instance Info</a>
         {% endblock footer %}
     </div>
 </body>

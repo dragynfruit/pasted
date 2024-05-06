@@ -2,21 +2,21 @@ use axum::{
     body::Body,
     extract::Path,
     response::{IntoResponse, Response},
-    routing, Form, Router, Json,
+    routing, Form, Json, Router,
 };
-use base64::{engine, Engine as _};
 use cookie_store::CookieStore;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::{env, process, time};
+use tera::{Context, Tera};
 use ureq::AgentBuilder;
 use ureq_multipart::MultipartBuilder;
 
 const URL: &str = "https://pastebin.com";
 
-static TEMPLATES: Lazy<tera::Tera> = Lazy::new(|| {
-    let mut tera = match tera::Tera::new("templates/*") {
+static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
+    let mut tera = match Tera::new("templates/*") {
         Ok(t) => t,
         Err(e) => {
             println!("Parsing error(s): {}", e);
@@ -32,18 +32,18 @@ struct InstanceInfo {
     version: String,
     name: String,
     start_time: String,
+    is_release: bool,
 }
 
-static INSTANCE_INFO: Lazy<InstanceInfo> = Lazy::new(|| {
-    InstanceInfo {
-        version: env!("CARGO_PKG_VERSION").to_string(),
-        name: env!("CARGO_PKG_NAME").to_string(),
-        start_time: time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            .to_string(),
-    }
+static INSTANCE_INFO: Lazy<InstanceInfo> = Lazy::new(|| InstanceInfo {
+    version: env!("CARGO_PKG_VERSION").to_string(),
+    name: env!("CARGO_PKG_NAME").to_string(),
+    start_time: time::SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        .to_string(),
+    is_release: cfg!(debug_assertions),
 });
 
 #[derive(Deserialize)]
@@ -62,7 +62,7 @@ struct Post {
 struct BasicUser {
     username: String,
     registered: bool,
-    icon: String,
+    icon_url: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -76,13 +76,18 @@ struct User {
 }
 
 #[derive(Deserialize, Serialize)]
-struct PasteInfo {
+struct BasicPasteInfo {
     title: String,
-    views: u64,
     date: String,
+    format: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct PasteInfo {
+    basic_info: BasicPasteInfo,
+    views: u64,
     expiration: String,
     num_comments: u64,
-    format: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -107,6 +112,7 @@ struct Paste {
     unlisted: bool,
     rating: f32,
     category: String,
+    id: String,
     comments: Vec<Comment>,
     tags: Vec<String>,
 }
@@ -119,9 +125,15 @@ async fn main() {
 
     let app = Router::new()
         .route("/", routing::get(index).post(post))
+        .route("/favicon.ico", routing::get(favicon))
         .route("/info", routing::get(info))
         .route("/info.json", routing::get(info_raw))
-        .route("/favicon.ico", routing::get(favicon))
+        .route("/imgs/guest.png", routing::get(guest))
+        .route("/imgs/:id0/:id1/:id2/:id3.jpg", routing::get(icon))
+        .route("/raw/:id", routing::get(view_raw))
+        .route("/json/:id", routing::get(view_json))
+        .route("/dl/:id", routing::get(view_download))
+        .route("/print/:id", routing::get(view_print))
         .route("/:id", routing::get(view));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -140,14 +152,24 @@ async fn main() {
 }
 
 /*
-    Favicon
+    Images
 */
 
 async fn favicon() -> impl IntoResponse {
     Response::builder()
         .status(200)
         .header("Content-Type", "image/x-icon")
+        .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(include_bytes!("favicon.ico").to_vec()))
+        .unwrap()
+}
+
+async fn guest() -> impl IntoResponse {
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "image/png")
+        .header("Cache-Control", "public, max-age=31536000, immutable")
+        .body(Body::from(include_bytes!("guest.png").to_vec()))
         .unwrap()
 }
 
@@ -161,7 +183,10 @@ async fn info() -> impl IntoResponse {
         .header("Content-Type", "text/html")
         .body(Body::new(
             TEMPLATES
-                .render("info.html", &tera::Context::from_serialize(&*INSTANCE_INFO).unwrap())
+                .render(
+                    "info.html",
+                    &Context::from_serialize(&*INSTANCE_INFO).unwrap(),
+                )
                 .unwrap(),
         ))
         .unwrap()
@@ -254,9 +279,7 @@ async fn post(Form(data): Form<Post>) -> impl IntoResponse {
         .header("Location", format!("/{paste_id}"))
         .header("Content-Type", "text/html")
         .body(Body::new(
-            TEMPLATES
-                .render("index.html", &tera::Context::new())
-                .unwrap(),
+            TEMPLATES.render("index.html", &Context::new()).unwrap(),
         ))
         .unwrap()
 }
@@ -266,31 +289,52 @@ async fn index() -> impl IntoResponse {
         .status(200)
         .header("Content-Type", "text/html")
         .body(Body::new(
-            TEMPLATES
-                .render("index.html", &tera::Context::new())
-                .unwrap(),
+            TEMPLATES.render("index.html", &Context::new()).unwrap(),
         ))
+        .unwrap()
+}
+
+/*
+    User Icons
+*/
+
+fn get_bytes(agent: &ureq::Agent, url: &str) -> Vec<u8> {
+    let mut data = Vec::new();
+    agent
+        .get(url)
+        .call()
+        .unwrap()
+        .into_reader()
+        .read_to_end(&mut data)
+        .unwrap();
+    data
+}
+
+async fn icon(
+    Path((id0, id1, id2, id3)): Path<(String, String, String, String)>,
+) -> impl IntoResponse {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .redirects(0)
+        .build();
+
+    let id3 = id3.split_once(".").unwrap().0;
+    let icon = get_bytes(
+        &agent,
+        format!("{URL}/cache/img/{id0}/{id1}/{id2}/{id3}.jpg").as_str(),
+    );
+
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "image/jpeg")
+        .header("Cache-Control", "public, max-age=31536000, immutable")
+        .body(Body::from(icon))
         .unwrap()
 }
 
 /*
     View Paste
 */
-
-fn get_icon(agent: &ureq::Agent, url: &str) -> String {
-    let mut icon_data = Vec::new();
-    agent
-        .get(url)
-        .call()
-        .unwrap()
-        .into_reader()
-        .read_to_end(&mut icon_data)
-        .unwrap();
-    format!(
-        "data:image/jpg;base64,{}",
-        engine::general_purpose::STANDARD.encode(icon_data)
-    )
-}
 
 fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
     let dom = get_html(agent, format!("{URL}/{id}").as_str());
@@ -300,7 +344,9 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .next()
         .unwrap()
         .text()
-        .collect::<String>();
+        .collect::<String>()
+        .trim()
+        .to_owned();
     let registered = dom
         .select(&Selector::parse(".post-view>.details .username>.a").unwrap())
         .next()
@@ -312,43 +358,26 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .value()
         .attr("src")
         .unwrap()
+        .replace("/themes/pastebin/img/", "")
+        .replace("/cache/img/", "")
         .to_owned();
-    let icon = get_icon(agent, &(URL.to_owned() + icon_url.as_str()));
+    let icon_url = format!("/imgs/{}", icon_url);
 
     let author = BasicUser {
         username,
         registered,
-        icon,
+        icon_url,
     };
 
     let title = dom
-        .select(&Selector::parse("h1").unwrap())
+        .select(&Selector::parse(".post-view>.details h1").unwrap())
         .next()
         .unwrap()
         .text()
         .collect::<String>();
 
-    let views = dom
-        .select(&Selector::parse(".visits").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .parse()
-        .unwrap();
-
     let date = dom
-        .select(&Selector::parse(".date").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .to_owned();
-
-    let expiration = dom
-        .select(&Selector::parse(".expire").unwrap())
+        .select(&Selector::parse(".post-view>.details .date").unwrap())
         .next()
         .unwrap()
         .text()
@@ -357,7 +386,32 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .to_owned();
 
     let format = dom
-        .select(&Selector::parse("a.btn.-small.h_800").unwrap())
+        .select(&Selector::parse(".post-view>.highlighted-code a.btn.-small.h_800").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_owned();
+
+    let basic_info = BasicPasteInfo {
+        title,
+        date,
+        format,
+    };
+
+    let views = dom
+        .select(&Selector::parse(".post-view>.details .visits").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .parse()
+        .unwrap();
+
+    let expiration = dom
+        .select(&Selector::parse(".post-view>.details .expire").unwrap())
         .next()
         .unwrap()
         .text()
@@ -366,23 +420,21 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .to_owned();
 
     let info = PasteInfo {
-        title,
+        basic_info,
         views,
-        date,
         expiration,
         num_comments: 0,
-        format,
     };
 
     let content = dom
-        .select(&Selector::parse(".source > ol").unwrap())
+        .select(&Selector::parse(".post-view>.highlighted-code .source > ol").unwrap())
         .next()
         .unwrap()
         .text()
         .collect::<String>()
         .to_owned();
     let likes = dom
-        .select(&Selector::parse(".-like").unwrap())
+        .select(&Selector::parse(".post-view>.highlighted-code .-like").unwrap())
         .next()
         .unwrap()
         .text()
@@ -391,7 +443,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .parse()
         .unwrap();
     let dislikes = dom
-        .select(&Selector::parse(".-dislike").unwrap())
+        .select(&Selector::parse(".post-view>.highlighted-code .-dislike").unwrap())
         .next()
         .unwrap()
         .text()
@@ -400,7 +452,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .parse()
         .unwrap();
     let size = dom
-        .select(&Selector::parse(".left").unwrap())
+        .select(&Selector::parse(".post-view>.highlighted-code .left").unwrap())
         .next()
         .unwrap()
         .text()
@@ -423,11 +475,11 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
     };
 
     let unlisted = dom
-        .select(&Selector::parse(".unlisted").unwrap())
+        .select(&Selector::parse(".post-view>.details .unlisted").unwrap())
         .next()
         .is_some();
     let rating = dom
-        .select(&Selector::parse(".rating").unwrap())
+        .select(&Selector::parse(".post-view>.details .rating").unwrap())
         .next()
         .unwrap()
         .text()
@@ -436,7 +488,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .parse()
         .unwrap();
     let category = dom
-        .select(&Selector::parse(".left > span:nth-child(2)").unwrap())
+        .select(&Selector::parse(".post-view>.highlighted-code .left > span:nth-child(2)").unwrap())
         .next()
         .unwrap()
         .text()
@@ -447,7 +499,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .1
         .to_owned();
     let tags = dom
-        .select(&Selector::parse(".tags > a").unwrap())
+        .select(&Selector::parse(".post-view>.tags > a").unwrap())
         .map(|el| el.text().collect::<String>().to_owned())
         .collect::<Vec<String>>();
 
@@ -457,9 +509,70 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         unlisted,
         rating,
         category,
+        id: id.to_owned(),
         comments: vec![],
         tags,
     }
+}
+
+async fn view_raw(Path(id): Path<String>) -> impl IntoResponse {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .redirects(0)
+        .build();
+    let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
+
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/plain")
+        .body(Body::from(content))
+        .unwrap()
+}
+
+async fn view_json(Path(id): Path<String>) -> Json<Paste> {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .redirects(0)
+        .build();
+    let paste = get_paste(&agent, &id);
+
+    Json(paste)
+}
+
+async fn view_download(Path(id): Path<String>) -> impl IntoResponse {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .redirects(0)
+        .build();
+    let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
+
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/plain")
+        .header(
+            "Content-Disposition",
+            format!("attachment; filename=\"{id}.txt\""),
+        )
+        .body(Body::from(content))
+        .unwrap()
+}
+
+async fn view_print(Path(id): Path<String>) -> impl IntoResponse {
+    let agent = AgentBuilder::new()
+        .cookie_store(CookieStore::default())
+        .redirects(0)
+        .build();
+    let paste = get_paste(&agent, &id);
+
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/html")
+        .body(Body::from(
+            TEMPLATES
+                .render("print.html", &Context::from_serialize(paste).unwrap())
+                .unwrap(),
+        ))
+        .unwrap()
 }
 
 async fn view(Path(id): Path<String>) -> impl IntoResponse {
@@ -469,13 +582,12 @@ async fn view(Path(id): Path<String>) -> impl IntoResponse {
         .build();
     let paste = get_paste(&agent, &id);
 
-    // get all the data
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
         .body(Body::from(
             TEMPLATES
-                .render("view.html", &tera::Context::from_serialize(paste).unwrap())
+                .render("view.html", &Context::from_serialize(paste).unwrap())
                 .unwrap(),
         ))
         .unwrap()
