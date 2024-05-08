@@ -924,7 +924,7 @@ dependencies = [
 
 [[package]]
 name = "pasted"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "axum",
  "once_cell",

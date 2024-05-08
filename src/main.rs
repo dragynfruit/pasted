@@ -89,6 +89,7 @@ struct PasteInfo {
     views: u64,
     expiration: String,
     num_comments: u64,
+    category: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -112,8 +113,8 @@ struct Paste {
     data: PasteData,
     unlisted: bool,
     rating: f32,
-    category: String,
     id: String,
+    is_comment: bool,
     comments: Vec<Comment>,
     tags: Vec<String>,
 }
@@ -408,7 +409,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .trim()
         .parse()
         .unwrap();
-
     let expiration = dom
         .select(&Selector::parse(".post-view>.details .expire").unwrap())
         .next()
@@ -417,12 +417,24 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .collect::<String>()
         .trim()
         .to_owned();
+    let category = dom
+        .select(&Selector::parse(".post-view>.highlighted-code .left > span:nth-child(2)").unwrap())
+        .next()
+        .unwrap()
+        .text()
+        .collect::<String>()
+        .trim()
+        .split_once(" ")
+        .unwrap()
+        .1
+        .to_owned();
 
     let info = PasteInfo {
         basic_info,
         views,
         expiration,
         num_comments: 0,
+        category,
     };
 
     let content = dom
@@ -486,17 +498,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         .trim()
         .parse()
         .unwrap();
-    let category = dom
-        .select(&Selector::parse(".post-view>.highlighted-code .left > span:nth-child(2)").unwrap())
-        .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .split_once(" ")
-        .unwrap()
-        .1
-        .to_owned();
     let tags = dom
         .select(&Selector::parse(".post-view>.tags > a").unwrap())
         .map(|el| el.text().collect::<String>().to_owned())
@@ -507,8 +508,8 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
         data,
         unlisted,
         rating,
-        category,
         id: id.to_owned(),
+        is_comment: false,
         comments: vec![],
         tags,
     }
