@@ -4,7 +4,6 @@ use axum::{
     response::{IntoResponse, Response},
     routing, Form, Json, Router,
 };
-use cookie_store::CookieStore;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -12,6 +11,8 @@ use std::{env, process, time};
 use tera::{Context, Tera};
 use ureq::AgentBuilder;
 use ureq_multipart::MultipartBuilder;
+
+mod request;
 
 const URL: &str = "https://pastebin.com";
 
@@ -160,7 +161,7 @@ async fn favicon() -> impl IntoResponse {
         .status(200)
         .header("Content-Type", "image/x-icon")
         .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::from(include_bytes!("favicon.ico").to_vec()))
+        .body(Body::from(include_bytes!("assets/favicon.ico").to_vec()))
         .unwrap()
 }
 
@@ -169,7 +170,7 @@ async fn guest() -> impl IntoResponse {
         .status(200)
         .header("Content-Type", "image/png")
         .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::from(include_bytes!("guest.png").to_vec()))
+        .body(Body::from(include_bytes!("assets/guest.png").to_vec()))
         .unwrap()
 }
 
@@ -223,7 +224,6 @@ fn get_csrftoken(agent: &ureq::Agent) -> String {
 
 async fn post(Form(data): Form<Post>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
     let csrf = get_csrftoken(&agent);
@@ -314,7 +314,6 @@ async fn icon(
     Path((id0, id1, id2, id3)): Path<(String, String, String, String)>,
 ) -> impl IntoResponse {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
 
@@ -517,7 +516,6 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
 
 async fn view_raw(Path(id): Path<String>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
     let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
@@ -531,7 +529,6 @@ async fn view_raw(Path(id): Path<String>) -> impl IntoResponse {
 
 async fn view_json(Path(id): Path<String>) -> Json<Paste> {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
     let paste = get_paste(&agent, &id);
@@ -541,7 +538,6 @@ async fn view_json(Path(id): Path<String>) -> Json<Paste> {
 
 async fn view_download(Path(id): Path<String>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
     let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
@@ -559,7 +555,6 @@ async fn view_download(Path(id): Path<String>) -> impl IntoResponse {
 
 async fn view_print(Path(id): Path<String>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
     let paste = get_paste(&agent, &id);
@@ -577,7 +572,6 @@ async fn view_print(Path(id): Path<String>) -> impl IntoResponse {
 
 async fn view(Path(id): Path<String>) -> impl IntoResponse {
     let agent = AgentBuilder::new()
-        .cookie_store(CookieStore::default())
         .redirects(0)
         .build();
     let paste = get_paste(&agent, &id);
