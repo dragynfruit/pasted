@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, State},
     response::{IntoResponse, Response},
     routing, Form, Json, Router,
 };
@@ -9,43 +9,14 @@ use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::{env, process, time};
 use tera::{Context, Tera};
-use ureq::AgentBuilder;
+use ureq::{Agent, AgentBuilder};
 use ureq_multipart::MultipartBuilder;
 
+mod routes;
+mod constants;
 mod request;
-
-const URL: &str = "https://pastebin.com";
-
-static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
-    let mut tera = match Tera::new("templates/*") {
-        Ok(t) => t,
-        Err(e) => {
-            println!("Parsing error(s): {}", e);
-            process::exit(1);
-        }
-    };
-    tera.autoescape_on(vec![".html", ".sql"]);
-    tera
-});
-
-#[derive(Deserialize, Serialize, Clone)]
-struct InstanceInfo {
-    version: String,
-    name: String,
-    start_time: String,
-    is_release: bool,
-}
-
-static INSTANCE_INFO: Lazy<InstanceInfo> = Lazy::new(|| InstanceInfo {
-    version: env!("CARGO_PKG_VERSION").to_string(),
-    name: env!("CARGO_PKG_NAME").to_string(),
-    start_time: time::SystemTime::now()
-        .duration_since(time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        .to_string(),
-    is_release: cfg!(debug_assertions),
-});
+mod tools;
+mod templates;
 
 #[derive(Deserialize)]
 struct Post {
@@ -125,19 +96,16 @@ async fn main() {
     let host = env::var("HOST").unwrap_or("0.0.0.0".to_string());
     let addr = format!("{}:{}", host, port);
 
+    let agent = AgentBuilder::new()
+        .redirects(0)
+        .build();
+
     let app = Router::new()
         .route("/", routing::get(index).post(post))
         .route("/favicon.ico", routing::get(favicon))
-        .route("/info", routing::get(info))
-        .route("/info.json", routing::get(info_raw))
-        .route("/imgs/guest.png", routing::get(guest))
-        .route("/imgs/:id0/:id1/:id2/:id3.jpg", routing::get(icon))
-        .route("/raw/:id", routing::get(view_raw))
-        .route("/json/:id", routing::get(view_json))
-        .route("/dl/:id", routing::get(view_download))
-        .route("/print/:id", routing::get(view_print))
-        .route("/:id", routing::get(view));
-
+        .with_state(agent)
+        .merge(routes::get_router());
+ 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     println!("Listening at {}", addr);
@@ -176,57 +144,10 @@ async fn guest() -> impl IntoResponse {
 }
 
 /*
-    Info
-*/
-
-async fn info() -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        .body(Body::new(
-            TEMPLATES
-                .render(
-                    "info.html",
-                    &Context::from_serialize(&*INSTANCE_INFO).unwrap(),
-                )
-                .unwrap(),
-        ))
-        .unwrap()
-}
-
-async fn info_raw() -> Json<InstanceInfo> {
-    Json(INSTANCE_INFO.clone())
-}
-
-/*
     Make Post
 */
 
-fn get_body(agent: &ureq::Agent, url: &str) -> String {
-    agent.get(&url).call().unwrap().into_string().unwrap()
-}
-
-fn get_html(agent: &ureq::Agent, url: &str) -> Html {
-    Html::parse_document(&get_body(agent, url))
-}
-
-fn get_csrftoken(agent: &ureq::Agent) -> String {
-    let dom = get_html(agent, format!("{}/", URL).as_str());
-    let csrf = dom
-        .select(&Selector::parse("meta[name=csrf-token]").unwrap())
-        .next()
-        .unwrap()
-        .value()
-        .attr("content")
-        .unwrap()
-        .to_owned();
-    csrf
-}
-
-async fn post(Form(data): Form<Post>) -> impl IntoResponse {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+async fn post(State(agent): State<Agent>, Form(data): Form<Post>) -> impl IntoResponse {
     let csrf = get_csrftoken(&agent);
 
     let form = MultipartBuilder::new()
@@ -299,18 +220,6 @@ async fn index() -> impl IntoResponse {
     User Icons
 */
 
-fn get_bytes(agent: &ureq::Agent, url: &str) -> Vec<u8> {
-    let mut data = Vec::new();
-    agent
-        .get(url)
-        .call()
-        .unwrap()
-        .into_reader()
-        .read_to_end(&mut data)
-        .unwrap();
-    data
-}
-
 async fn icon(
     Path((id0, id1, id2, id3)): Path<(String, String, String, String)>,
 ) -> impl IntoResponse {
@@ -336,7 +245,7 @@ async fn icon(
     View Paste
 */
 
-fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
+fn get_paste(agent: &Agent, id: &str) -> Paste {
     let dom = get_html(agent, format!("{URL}/{id}").as_str());
 
     let username = dom
@@ -515,10 +424,7 @@ fn get_paste(agent: &ureq::Agent, id: &str) -> Paste {
     }
 }
 
-async fn view_raw(Path(id): Path<String>) -> impl IntoResponse {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+async fn view_raw(State(agent): State<Agent>, Path(id): Path<String>) -> impl IntoResponse {
     let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
 
     Response::builder()
@@ -528,19 +434,13 @@ async fn view_raw(Path(id): Path<String>) -> impl IntoResponse {
         .unwrap()
 }
 
-async fn view_json(Path(id): Path<String>) -> Json<Paste> {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+async fn view_json(State(agent): State<Agent>, Path(id): Path<String>) -> Json<Paste> {
     let paste = get_paste(&agent, &id);
 
     Json(paste)
 }
 
-async fn view_download(Path(id): Path<String>) -> impl IntoResponse {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+async fn view_download(State(agent): State<Agent>, Path(id): Path<String>) -> impl IntoResponse {
     let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
 
     Response::builder()
@@ -554,10 +454,7 @@ async fn view_download(Path(id): Path<String>) -> impl IntoResponse {
         .unwrap()
 }
 
-async fn view_print(Path(id): Path<String>) -> impl IntoResponse {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+async fn view_print(State(agent): State<Agent>, Path(id): Path<String>) -> impl IntoResponse {
     let paste = get_paste(&agent, &id);
 
     Response::builder()
@@ -571,10 +468,7 @@ async fn view_print(Path(id): Path<String>) -> impl IntoResponse {
         .unwrap()
 }
 
-async fn view(Path(id): Path<String>) -> impl IntoResponse {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+async fn view(State(agent): State<Agent>, Path(id): Path<String>) -> impl IntoResponse {
     let paste = get_paste(&agent, &id);
 
     Response::builder()
