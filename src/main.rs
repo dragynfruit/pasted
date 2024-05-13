@@ -11,12 +11,13 @@ use std::{env, process, time};
 use tera::{Context, Tera};
 use ureq::{Agent, AgentBuilder};
 use ureq_multipart::MultipartBuilder;
+use create::client::Client;
+
 
 mod routes;
 mod constants;
-mod request;
+mod client;
 mod tools;
-mod templates;
 
 #[derive(Deserialize)]
 struct Post {
@@ -96,15 +97,12 @@ async fn main() {
     let host = env::var("HOST").unwrap_or("0.0.0.0".to_string());
     let addr = format!("{}:{}", host, port);
 
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
+    let client = Client::new();
 
     let app = Router::new()
         .route("/", routing::get(index).post(post))
-        .route("/favicon.ico", routing::get(favicon))
-        .with_state(agent)
-        .merge(routes::get_router());
+        .with_state(client)
+        .merge(routes::get_router(client));
  
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
@@ -119,28 +117,6 @@ async fn main() {
         .unwrap();
 
     println!("Shutting down");
-}
-
-/*
-    Images
-*/
-
-async fn favicon() -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "image/x-icon")
-        .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::from(include_bytes!("assets/favicon.ico").to_vec()))
-        .unwrap()
-}
-
-async fn guest() -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "image/png")
-        .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::from(include_bytes!("assets/guest.png").to_vec()))
-        .unwrap()
 }
 
 /*
@@ -203,41 +179,6 @@ async fn post(State(agent): State<Agent>, Form(data): Form<Post>) -> impl IntoRe
         .body(Body::new(
             TEMPLATES.render("index.html", &Context::new()).unwrap(),
         ))
-        .unwrap()
-}
-
-async fn index() -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        .body(Body::new(
-            TEMPLATES.render("index.html", &Context::new()).unwrap(),
-        ))
-        .unwrap()
-}
-
-/*
-    User Icons
-*/
-
-async fn icon(
-    Path((id0, id1, id2, id3)): Path<(String, String, String, String)>,
-) -> impl IntoResponse {
-    let agent = AgentBuilder::new()
-        .redirects(0)
-        .build();
-
-    let id3 = id3.split_once(".").unwrap().0;
-    let icon = get_bytes(
-        &agent,
-        format!("{URL}/cache/img/{id0}/{id1}/{id2}/{id3}.jpg").as_str(),
-    );
-
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "image/jpeg")
-        .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::from(icon))
         .unwrap()
 }
 
