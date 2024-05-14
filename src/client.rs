@@ -14,7 +14,11 @@ impl Client {
         }
     }
 
-    pub fn get_body(&self, url: &str) -> String {
+    pub fn get_agent(&self) -> &Agent {
+        &self.agent
+    }
+
+    pub fn get_string(&self, url: &str) -> String {
         self.agent.get(url).call().unwrap().into_string().unwrap()
     }
 
@@ -31,6 +35,6 @@ impl Client {
     }
 
     pub fn get_html(&self, url: &str) -> Html {
-        Html::parse_document(&self.get_body(url))
+        Html::parse_document(&&self.get_string(url))
     }
 }

@@ -2,15 +2,17 @@ use axum::Router;
 
 use crate::client::Client;
 
-mod public;
-mod paste;
-mod info;
 mod images;
+mod info;
+mod post;
+mod public;
+mod view;
 
 pub fn get_router(client: Client) -> Router {
     Router::new()
         .nest("/", public::get_router())
-        .nest("/", paste::get_router(client))
+        .nest("/", post::get_router(client))
+        .nest("/", view::get_router(client))
         .nest("/info", info::get_router())
         .nest("/imgs", images::get_router(client))
 }

@@ -1,7 +1,11 @@
-use std::time;
-use axum::{body::Body, response::{IntoResponse, Response}, routing, Json, Router};
+use axum::{
+    body::Body,
+    response::{IntoResponse, Response},
+    routing, Json, Router,
+};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::time;
 use tera::Context;
 
 use crate::constants::TEMPLATES;

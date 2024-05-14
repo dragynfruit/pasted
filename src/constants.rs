@@ -1,5 +1,5 @@
-use std::process;
 use once_cell::sync::Lazy;
+use std::process;
 use tera::Tera;
 
 pub const URL: &str = "https://pastebin.com";

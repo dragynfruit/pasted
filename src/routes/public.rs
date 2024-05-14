@@ -1,11 +1,14 @@
-use axum::{body::Body, response::{IntoResponse, Response}, routing, Router};
+use axum::{
+    body::Body,
+    response::{IntoResponse, Response},
+    routing, Router,
+};
 use tera::Context;
 
 use crate::constants::TEMPLATES;
 
 pub fn get_router() -> Router {
-    Router::new()
-        .route("/", routing::get(index))
+    Router::new().route("/", routing::get(index))
 }
 
 async fn index() -> impl IntoResponse {

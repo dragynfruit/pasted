@@ -1,35 +1,21 @@
+use crate::client::Client;
 use axum::{
     body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
-    routing, Form, Json, Router,
+    Json,
 };
-use once_cell::sync::Lazy;
-use scraper::{Html, Selector};
+use scraper::Selector;
 use serde::{Deserialize, Serialize};
-use std::{env, process, time};
-use tera::{Context, Tera};
-use ureq::{Agent, AgentBuilder};
-use ureq_multipart::MultipartBuilder;
-use create::client::Client;
+use std::env;
+use tera::Context;
+use ureq::Agent;
 
-
-mod routes;
-mod constants;
 mod client;
-mod tools;
-
-#[derive(Deserialize)]
-struct Post {
-    text: String,
-    category: u8,
-    tags: String,
-    format: u16,
-    expiration: String,
-    exposure: u8,
-    password: String,
-    name: String,
-}
+mod constants;
+mod paste;
+mod routes;
+mod paste;
 
 #[derive(Deserialize, Serialize)]
 struct BasicUser {
@@ -99,11 +85,7 @@ async fn main() {
 
     let client = Client::new();
 
-    let app = Router::new()
-        .route("/", routing::get(index).post(post))
-        .with_state(client)
-        .merge(routes::get_router(client));
- 
+    let app = routes::get_router(client);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     println!("Listening at {}", addr);
@@ -117,69 +99,6 @@ async fn main() {
         .unwrap();
 
     println!("Shutting down");
-}
-
-/*
-    Make Post
-*/
-
-async fn post(State(agent): State<Agent>, Form(data): Form<Post>) -> impl IntoResponse {
-    let csrf = get_csrftoken(&agent);
-
-    let form = MultipartBuilder::new()
-        .add_text("_csrf-frontend", &csrf)
-        .unwrap()
-        .add_text("PostForm[text]", &data.text)
-        .unwrap()
-        .add_text("PostForm[category_id]", &data.category.to_string())
-        .unwrap()
-        .add_text("PostForm[tag]", &data.tags)
-        .unwrap()
-        .add_text("PostForm[format]", &data.format.to_string())
-        .unwrap()
-        .add_text("PostForm[expiration]", &data.expiration.to_string())
-        .unwrap()
-        .add_text("PostForm[status]", &data.exposure.to_string())
-        .unwrap()
-        .add_text(
-            "PostForm[is_password_enabled]",
-            if data.password.is_empty() { "0" } else { "1" },
-        )
-        .unwrap()
-        .add_text("PostForm[password]", &data.password)
-        .unwrap()
-        .add_text(
-            "PostForm[is_burn]",
-            if data.expiration == "B" { "1" } else { "0" },
-        )
-        .unwrap()
-        .add_text("PostForm[name]", &data.name)
-        .unwrap()
-        .add_text("PostForm[is_guest]", "1")
-        .unwrap()
-        .finish()
-        .unwrap();
-
-    let response = agent
-        .post(format!("{URL}/").as_str())
-        .set("Content-Type", &form.0)
-        .send_bytes(&form.1)
-        .unwrap();
-    let paste_id = response
-        .header("Location")
-        .unwrap()
-        .split("/")
-        .last()
-        .unwrap();
-
-    Response::builder()
-        .status(response.status())
-        .header("Location", format!("/{paste_id}"))
-        .header("Content-Type", "text/html")
-        .body(Body::new(
-            TEMPLATES.render("index.html", &Context::new()).unwrap(),
-        ))
-        .unwrap()
 }
 
 /*
@@ -363,16 +282,6 @@ fn get_paste(agent: &Agent, id: &str) -> Paste {
         comments: vec![],
         tags,
     }
-}
-
-async fn view_raw(State(agent): State<Agent>, Path(id): Path<String>) -> impl IntoResponse {
-    let content = get_body(&agent, format!("{URL}/raw/{id}").as_str());
-
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/plain")
-        .body(Body::from(content))
-        .unwrap()
 }
 
 async fn view_json(State(agent): State<Agent>, Path(id): Path<String>) -> Json<Paste> {

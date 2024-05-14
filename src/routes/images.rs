@@ -1,4 +1,9 @@
-use axum::{body::Body, extract::{Path, State}, response::{IntoResponse, Response}, routing, Router};
+use axum::{
+    body::Body,
+    extract::{Path, State},
+    response::{IntoResponse, Response},
+    routing, Router,
+};
 
 use crate::{client::Client, constants::URL};
 
@@ -32,11 +37,8 @@ async fn icon(
     State(client): State<Client>,
     Path((id0, id1, id2, id3)): Path<(String, String, String, String)>,
 ) -> impl IntoResponse {
-
     let id3 = id3.split_once(".").unwrap().0;
-    let icon = client.get_bytes(
-        format!("{URL}/cache/img/{id0}/{id1}/{id2}/{id3}.jpg").as_str(),
-    );
+    let icon = client.get_bytes(format!("{URL}/cache/img/{id0}/{id1}/{id2}/{id3}.jpg").as_str());
 
     Response::builder()
         .status(200)
