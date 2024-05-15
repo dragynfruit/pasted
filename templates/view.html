@@ -7,20 +7,20 @@
 {% block content %}
 <div id="paste">
     <div id="header">
-        <h2>{{ info.basic_info.title }} <img src="{{data.author.icon_url}}"></h2>
-        <span>{{ info.basic_info.date }}</span> |
-        <span>{{ info.category }}</span> |
-        <span>{{ info.basic_info.format }}</span> |
-        <span>{{ data.size }}</span> |
-        <span>{{ data.likes }} likes / {{ data.dislikes }} dislikes</span> |
+        <h2>{{ title }} <img src="{{author.icon_url}}"></h2>
+        <span>{{ date }}</span> |
+        <span>{{ container.category }}</span> |
+        <span>{{ container.format }}</span> |
+        <span>{{ container.size }}</span> |
+        <span>{{ container.likes }} likes / {{ container.dislikes }} dislikes</span> |
         <span>{{ rating }} rating </span> |
-        <span>{{ info.views }} views</span> |
-        <span>expires {{ info.expiration }}</span> |
+        <span>{{ views }} views</span> |
+        <span>expires {{ expire }}</span> |
         <span>{{ tags }}</span> |
-        <span>{{ id }}</span>
+        <span>{{ container.id }}</span>
     </div>
     <div id="text">
-        <pre><code>{{ data.content }}</code></pre>
+        <pre><code>{{ container.content }}</code></pre>
     </div>
 </div>
 {% endblock content %}
