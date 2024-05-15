@@ -17,25 +17,27 @@
 </style>
 {% endblock head %}
 {% block content %}
-    <table id="info">
-        <tr>
-            <td colspan="2"><h2>Instance Info</h2></td>
-        </tr>
-        <tr>
-            <td>Name</td>
-            <td>{{ name }}</td>
-        </tr>
-        <tr>
-            <td>Version</td>
-            <td>{{ version }}</td>
-        </tr>
-        <tr>
-            <td>Start Time</td>
-            <td>{{ start_time }}</td>
-        </tr>
-        <tr>
-            <td>Is Release</td>
-            <td>{{ is_release }}</td>
-        </tr>
-    </table>
+<table id="info">
+    <tr>
+        <td colspan="2">
+            <h2>Instance Info</h2>
+        </td>
+    </tr>
+    <tr>
+        <td>Name</td>
+        <td>{{ name }}</td>
+    </tr>
+    <tr>
+        <td>Version</td>
+        <td>{{ version }}</td>
+    </tr>
+    <tr>
+        <td>Start Time</td>
+        <td>{{ start_time }}</td>
+    </tr>
+    <tr>
+        <td>Is Release</td>
+        <td>{{ is_release }}</td>
+    </tr>
+</table>
 {% endblock content %}

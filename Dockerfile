@@ -9,6 +9,7 @@ FROM debian:bookworm-slim
 
 COPY --from=builder /usr/src/pasted/target/release/pasted /usr/local/bin/pasted/pasted
 COPY --from=builder /usr/src/pasted/templates /usr/local/bin/pasted/templates
+COPY --from=builder /usr/src/pasted/static /usr/local/bin/pasted/static
 
 WORKDIR /usr/local/bin/pasted
 CMD ["./pasted"]
