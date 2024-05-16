@@ -28,9 +28,30 @@ struct Post {
 
 pub fn get_router(client: Client) -> Router {
     Router::new()
-        .route("/", routing::post(post))
+        .route("/", routing::get(index).post(post))
+        .route("/favicon.ico", routing::get(favicon))
         .with_state(client)
 }
+
+async fn favicon() -> impl IntoResponse {
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "image/x-icon")
+        .header("Cache-Control", "public, max-age=31536000, immutable")
+        .body(Body::from(include_bytes!("assets/favicon.ico").to_vec()))
+        .unwrap()
+}
+
+async fn index() -> impl IntoResponse {
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/html")
+        .body(Body::new(
+            TEMPLATES.render("index.html", &Context::new()).unwrap(),
+        ))
+        .unwrap()
+}
+
 
 async fn post(State(client): State<Client>, Form(data): Form<Post>) -> impl IntoResponse {
     let csrf = get_csrftoken(client.get_html(format!("{URL}/").as_str()));

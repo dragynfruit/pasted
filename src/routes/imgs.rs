@@ -9,19 +9,9 @@ use crate::{client::Client, constants::URL};
 
 pub fn get_router(client: Client) -> Router {
     Router::new()
-        .route("/favicon.ico", routing::get(favicon))
-        .route("/imgs/guest.png", routing::get(guest))
-        .route("/imgs/:id0/:id1/:id2/:id3.jpg", routing::get(icon))
+        .route("/guest.png", routing::get(guest))
+        .route("/:id0/:id1/:id2/:id3.jpg", routing::get(icon))
         .with_state(client)
-}
-
-async fn favicon() -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "image/x-icon")
-        .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::from(include_bytes!("assets/favicon.ico").to_vec()))
-        .unwrap()
 }
 
 async fn guest() -> impl IntoResponse {

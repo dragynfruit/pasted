@@ -83,11 +83,11 @@ pub fn parse_simple_user(parent_selector: &str, dom: &Html) -> SimpleUser {
             .trim()
             .to_owned(),
         registered: dom
-            .select(&Selector::parse(&format!("{parent_selector} .username > a")).unwrap())
+            .select(&Selector::parse(&format!("{parent_selector} .username>a")).unwrap())
             .next()
             .is_some(),
         icon_url: dom
-            .select(&Selector::parse(&format!("{parent_selector} .user-icon > img")).unwrap())
+            .select(&Selector::parse(&format!("{parent_selector} .user-icon>img")).unwrap())
             .next()
             .unwrap()
             .value()
@@ -172,7 +172,7 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         .to_owned();
 
     let content = dom
-        .select(&Selector::parse(&format!("{parent_selector} .source > ol")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} .source>ol")).unwrap())
         .next()
         .unwrap()
         .text()
@@ -194,7 +194,7 @@ pub fn parse_comment(parent_selector: &str, dom: &Html) -> Comment {
     let author = parse_simple_user(&format!("{parent_selector}"), dom);
 
     let date = parse_date(
-        &dom.select(&Selector::parse(&format!("{parent_selector} .date > span")).unwrap())
+        &dom.select(&Selector::parse(&format!("{parent_selector} .date>span")).unwrap())
             .next()
             .unwrap()
             .attr("title")
@@ -221,12 +221,12 @@ pub fn parse_paste(dom: &Html) -> Paste {
     let parent_selector = ".post-view";
 
     let title = dom
-        .select(&Selector::parse(&format!("{parent_selector} .info-top > h1")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} .info-top>h1")).unwrap())
         .next()
         .map(|x| x.text().collect::<String>());
 
     let tags = dom
-        .select(&Selector::parse(&format!("{parent_selector} .tags > a")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} .tags>a")).unwrap())
         .map(|el| el.text().collect::<String>().to_owned())
         .collect::<Vec<String>>();
 
@@ -235,7 +235,7 @@ pub fn parse_paste(dom: &Html) -> Paste {
     let author = parse_simple_user(&format!("{parent_selector}"), dom);
 
     let date = parse_date(
-        &dom.select(&Selector::parse(&format!("{parent_selector} .date > span")).unwrap())
+        &dom.select(&Selector::parse(&format!("{parent_selector} .date>span")).unwrap())
             .next()
             .unwrap()
             .attr("title")
@@ -279,7 +279,7 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .is_some();
 
     let num_comments = dom
-        .select(&Selector::parse(&format!("{parent_selector} div[title=Comments] > a")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} div[title=Comments]>a")).unwrap())
         .next()
         .unwrap()
         .text()
@@ -289,11 +289,11 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .unwrap_or(0);
 
     let comments = dom
-        .select(&Selector::parse(&format!("{parent_selector} .comments__list > ul > li")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} .comments__list>ul>li")).unwrap())
         .enumerate()
         .map(|(i, _)| {
             parse_comment(
-                &format!("{parent_selector} .comments__list > ul > li:nth-child({})", i + 1),
+                &format!("{parent_selector} .comments__list>ul>li:nth-child({})", i + 1),
                 dom,
             )
         })
