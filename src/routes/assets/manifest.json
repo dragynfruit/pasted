@@ -1,0 +1,15 @@
+{
+    "name": "Pasted",
+    "short_name": "Pasted",
+    "display": "standalone",
+    "background_color": "#121212",
+    "description": "Pasted is a free, privacy respecting frontend for pastebin written in Rust.",
+    "theme_color": "#b400d8",
+    "start_url": "/",
+    "icons": [
+        {
+            "src": "favicon.ico",
+            "sizes": "32x32"
+        }
+    ]
+}

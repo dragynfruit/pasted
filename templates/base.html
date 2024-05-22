@@ -5,8 +5,20 @@
     {% block head %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <title>{% block title %}{% endblock title %} - Pasted</title>
     {% endblock head %}
+
+    {% block seo %}
+    <link rel="manifest" type="application/json" href="/manifest.json">
+
+    <meta name="description" content="Pasted is a free, privacy respecting frontend for pastebin written in Rust.">
+    <meta name="keywords" content="pastebin, paste, pasted, rust, privacy, free">
+    <meta name="robots" content="index, follow">
+    
+    <meta name="og:site_name" content="Pasted">
+    <meta name="og:locale" content="en_US">
+    {% endblock seo %}
 
     <style>
         :root {
@@ -41,12 +53,12 @@
             background-color: var(--background-secondary-color);
         }
 
-        #nav > h1 {
+        #nav>h1 {
             margin-top: 1rem;
             margin-left: 1rem;
         }
 
-        #nav > h1 > a {
+        #nav>h1>a {
             text-decoration: none;
             color: var(--primary-color);
         }

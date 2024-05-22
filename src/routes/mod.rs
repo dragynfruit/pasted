@@ -5,6 +5,7 @@ use crate::client::Client;
 mod imgs;
 mod info;
 mod post;
+mod public;
 mod users;
 mod view;
 
@@ -14,5 +15,6 @@ pub fn get_router(client: Client) -> Router {
         .nest("/u", users::get_router(client.clone()))
         .nest("/imgs", imgs::get_router(client.clone()))
         .nest("/", post::get_router(client.clone()))
+        .nest("/", public::get_router())
         .nest("/", view::get_router(client.clone()))
 }

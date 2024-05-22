@@ -1,12 +1,13 @@
 use crate::client::Client;
 use axum;
-use tokio::net::TcpListener;
 use std::env;
+use tokio::net::TcpListener;
 
 mod client;
 mod constants;
-mod routes;
 mod paste;
+mod routes;
+mod templates;
 
 #[tokio::main]
 async fn main() {

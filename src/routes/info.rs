@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::time;
 use tera::Context;
 
-use crate::constants::TEMPLATES;
+use crate::templates::TEMPLATES;
 
 #[derive(Deserialize, Serialize, Clone)]
 struct InstanceInfo {

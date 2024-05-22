@@ -1,26 +1,68 @@
+{% import "container.html" as container_macros %}
 {% extends "base.html" %}
 {% block title %}View{% endblock title %}
+{% block seo %}
+<meta name="author" content="{{ author.username }}">
+<meta name="description" content="{{ container.content | truncate(length=160) }}">
+<meta name="keywords" content="{{ tags }}">
+<meta name="robots" content="index, follow">
+
+<meta name="og:title" content="{{ title }}">
+<meta name="og:description" content="View on Pasted, the free and private Pastebin frontend.">
+<meta name="og:image" content="{{ author.icon_url }}">
+<meta name="og:url" content="/{{ container.id }}">
+<meta name="og:type" content="article">
+
+<meta name="article:author" content="{{ author.username }}">
+<meta name="article:published_time" content="{{ date | format_date }}">
+<meta name="article:modified_time" content="{{ date | format_date }}">
+<meta name="article:section" content="{{ container.category }}">
+<meta name="article:tag" content="{{ tags }}">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@pasted">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="View on Pasted, the free and private Pastebin frontend.">
+<meta name="twitter:image" content="{{ author.icon_url }}">
+<meta name="twitter:url" content="/{{ container.id }}">
+{% endblock seo %}
 {% block head %}
 {{ super() }}
-<style></style>
+{{ container_macros::generate_style() }}
+<style>
+    #comments {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    #comments li {
+        margin-bottom: 10px;
+    }
+</style>
 {% endblock head %}
 {% block content %}
 <div id="paste">
     <div id="header">
         <h2>{{ title }} <img src="{{author.icon_url}}"></h2>
-        <span>{{ date }}</span> |
-        <span>{{ container.category }}</span> |
-        <span>{{ container.format }}</span> |
-        <span>{{ container.size }}</span> |
-        <span>{{ container.likes }} likes / {{ container.dislikes }} dislikes</span> |
+        <span>{{ date | format_date }}</span> |
         <span>{{ rating }} rating </span> |
         <span>{{ views }} views</span> |
         <span>expires {{ expire }}</span> |
         <span>{{ tags }}</span> |
         <span>{{ container.id }}</span>
     </div>
-    <div id="text">
-        <pre><code>{{ container.content }}</code></pre>
-    </div>
+    {{ container_macros::generate_container(container=container) }}
+
+    <h2>Comments</h2>
+    <ul id="comments">
+        {% for comment in comments %}
+        <li>
+            <img src="{{ comment.author.icon_url }}" alt="{{ comment.author.username }}">
+            <span>{{ comment.author.username }}</span> |
+            <span>{{ comment.date | format_date }}</span>
+            {{ container_macros::generate_container(container=comment.container) }}
+        </li>
+        {% endfor %}
+    </ul>
 </div>
 {% endblock content %}

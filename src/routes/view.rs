@@ -1,6 +1,14 @@
-use crate::{client::Client, constants::{TEMPLATES, URL}, paste::{self, Paste}};
+use crate::{
+    client::Client,
+    constants::URL,
+    templates::TEMPLATES,
+    paste::{self, Paste},
+};
 use axum::{
-    body::Body, extract::{Path, State}, response::{IntoResponse, Response}, routing, Json, Router
+    body::Body,
+    extract::{Path, State},
+    response::{IntoResponse, Response},
+    routing, Json, Router,
 };
 use tera::Context;
 

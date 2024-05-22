@@ -3,10 +3,10 @@ use chrono::DateTime;
 use scraper::{Html, Selector};
 use serde::Serialize;
 
-pub struct User {
-    simple: SimpleUser,
-    website: Option<String>,
-}
+// pub struct User {
+//     simple: SimpleUser,
+//     website: Option<String>,
+// }
 
 #[derive(Serialize)]
 pub struct SimpleUser {
@@ -64,8 +64,7 @@ pub fn parse_date(date: &str) -> i64 {
     let start_index = date.find(" of").unwrap() - 2;
     let end_index = start_index + 5;
 
-    let date =
-        format!("{}{}", &date[..start_index], &date[end_index..]).replace("CDT", "-0500");
+    let date = format!("{}{}", &date[..start_index], &date[end_index..]).replace("CDT", "-0500");
 
     DateTime::parse_from_str(&date, "%A %e %B %Y %r %z")
         .unwrap()
@@ -133,7 +132,7 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
     .as_u64();
 
     let likes = dom
-        .select(&Selector::parse(&format!("{parent_selector} a[title=Like]")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} .-like")).unwrap())
         .next()
         .unwrap()
         .text()
@@ -143,7 +142,7 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         .unwrap();
 
     let dislikes = dom
-        .select(&Selector::parse(&format!("{parent_selector} a[title=Dislike]")).unwrap())
+        .select(&Selector::parse(&format!("{parent_selector} .-dislike")).unwrap())
         .next()
         .unwrap()
         .text()
@@ -293,7 +292,10 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .enumerate()
         .map(|(i, _)| {
             parse_comment(
-                &format!("{parent_selector} .comments__list>ul>li:nth-child({})", i + 1),
+                &format!(
+                    "{parent_selector} .comments__list>ul>li:nth-child({})",
+                    i + 1
+                ),
                 dom,
             )
         })

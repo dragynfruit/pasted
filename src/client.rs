@@ -1,4 +1,3 @@
-
 use scraper::Html;
 use ureq::{Agent, AgentBuilder};
 
