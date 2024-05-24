@@ -14,7 +14,7 @@ use tera::Context;
 
 pub fn get_router(client: Client) -> Router {
     Router::new()
-        .route("/raws/:id", routing::get(view_raw))
+        .route("/raw/:id", routing::get(view_raw))
         .route("/json/:id", routing::get(view_json))
         .route("/dl/:id", routing::get(view_download))
         .route("/print/:id", routing::get(view_print))

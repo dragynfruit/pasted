@@ -17,7 +17,9 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Make simple homepage and info page
 - [x] Make info api
 - [x] Comments
-- [ ] Make simple paste view page
+- [x] Make simple paste view page
+- [ ] Embed paste
+- [ ] Clone Paste
 - [ ] User pages
 - [ ] Archive page
 - [ ] View deleted pastes

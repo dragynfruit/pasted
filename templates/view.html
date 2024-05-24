@@ -30,6 +30,45 @@
 {{ super() }}
 {{ container_macros::generate_style() }}
 <style>
+    #paste {
+        margin: 0 auto;
+        max-width: 800px;
+        padding: 20px;
+    }
+
+    .pro {
+        color: #d4d800;
+    }
+
+    .header {
+        display: grid;
+        grid-template-columns: 6em auto;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "header-left header-top"
+            "header-left header-bottom";
+        margin-bottom: 20px;
+    }
+
+    .header-left {
+        grid-area: header-left;
+    }
+
+    .header-top {
+        grid-area: header-top;
+        padding-left: 10px;
+    }
+
+    .header-bottom {
+        grid-area: header-bottom;
+        padding-left: 10px;
+    }
+
+    .header-left>img {
+        width: 100%;
+        height: auto;
+    }
+
     #comments {
         list-style-type: none;
         padding: 0;
@@ -38,31 +77,86 @@
     #comments li {
         margin-bottom: 10px;
     }
+
+    #comments .header {
+        grid-template-columns: 3em;
+    }
+
+    #comments .header-top > h2 {
+        font-size: 1em;
+    }
+
+    #comments .header-bottom {
+        font-size: 0.8em;
+    }
 </style>
 {% endblock head %}
 {% block content %}
 <div id="paste">
-    <div id="header">
-        <h2>{{ title }} <img src="{{author.icon_url}}"></h2>
-        <span>{{ date | format_date }}</span> |
-        <span>{{ rating }} rating </span> |
-        <span>{{ views }} views</span> |
-        <span>expires {{ expire }}</span> |
-        <span>{{ tags }}</span> |
-        <span>{{ container.id }}</span>
+    <div class="header">
+        <div class="header-left">
+            <img src="{{author.icon_url}}">
+        </div>
+        <div class="header-top">
+            {% if comment_for %}
+            <h2>Comment for <a href="/{{ comment_for }}">{{ comment_for }}</a></h2>
+            {% else %}
+            <h2>{{ title }}</h2>
+            {% endif %}
+        </div>
+        <div class="header-bottom">
+            {% if author.registered %}
+            <a href="/{{ author.username }}">{{ author.username }}</a> |
+            {% if author.pro %}
+            <span class="pro">PRO</span> |
+            {% endif %}
+            {% else %}
+            <span>{{ author.username }}</span> |
+            {% endif %}
+            <span>{{ date | format_date_user }}</span> |
+            <span>{{ rating }} ⭐ </span> |
+            <span>{{ views }} 👁️</span> |
+            <span>{{ expire }} ⏰</span> |
+            <span>{{ tags }}</span>
+        </div>
     </div>
+
     {{ container_macros::generate_container(container=container) }}
 
-    <h2>Comments</h2>
-    <ul id="comments">
-        {% for comment in comments %}
-        <li>
-            <img src="{{ comment.author.icon_url }}" alt="{{ comment.author.username }}">
-            <span>{{ comment.author.username }}</span> |
-            <span>{{ comment.date | format_date }}</span>
-            {{ container_macros::generate_container(container=comment.container) }}
-        </li>
-        {% endfor %}
-    </ul>
+    <div id="comments">
+        <h2>Comments</h2>
+        <ul id="comments">
+            {% for comment in comments %}
+            <li>
+                <!-- <img src="{{ comment.author.icon_url }}" alt="{{ comment.author.username }}">
+                {% if comment.author.registered %}
+                <a href="/{{ comment.author.username }}">{{ comment.author.username }}</a> |
+                {% else %}
+                <span>{{ comment.author.username }}</span> |
+                {% endif %}
+                <span>{{ comment.date | format_date_user }}</span> -->
+                <div class="header">
+                    <div class="header-left">
+                        <img src="{{ comment.author.icon_url }}">
+                    </div>
+                    <div class="header-top">
+                        {% if comment.author.registered %}
+                        <a href="/{{ comment.author.username }}">{{ comment.author.username }}</a>
+                        {% if comment.author.pro %}
+                        <span class="pro">PRO</span>
+                        {% endif %}
+                        {% else %}
+                        <span>{{ comment.author.username }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="header-bottom">
+                        <span>{{ comment.date | format_date_user }}</span>
+                    </div>
+                </div>
+                {{ container_macros::generate_container(container=comment.container) }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
 </div>
 {% endblock content %}

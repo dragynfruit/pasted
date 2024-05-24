@@ -16,6 +16,7 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
         }
     };
     tera.register_filter("format_date", format_date);
+    tera.register_filter("format_date_user", format_date_user);
     tera.register_filter("format_bytes", format_bytes);
     tera
 });
@@ -23,6 +24,16 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
 fn format_date(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
     if let Some(num) = value.as_i64() {
         Ok(tera::to_value(DateTime::from_timestamp(num, 0).unwrap().to_rfc3339()).unwrap())
+    } else {
+        Err(Error::msg(
+            "Filter `format_date` was used on a value that isn't a valid number.",
+        ))
+    }
+}
+
+fn format_date_user(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
+    if let Some(num) = value.as_i64() {
+        Ok(tera::to_value(DateTime::from_timestamp(num, 0).unwrap().format("%D %r %Z").to_string()).unwrap())
     } else {
         Err(Error::msg(
             "Filter `format_date` was used on a value that isn't a valid number.",

@@ -5,7 +5,8 @@
     {% block head %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="shortcut icon" type="image/png" href="/favicon.png">
+
     <title>{% block title %}{% endblock title %} - Pasted</title>
     {% endblock head %}
 
@@ -18,6 +19,7 @@
     
     <meta name="og:site_name" content="Pasted">
     <meta name="og:locale" content="en_US">
+    <meta name="og:image" content="/favicon.png">
     {% endblock seo %}
 
     <style>
@@ -39,7 +41,7 @@
 
         html,
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
             background-color: var(--background-primary-color);
             color: var(--text-color);
             padding: 0;
@@ -123,7 +125,7 @@
     <div id="content">{% block content %}{% endblock content %}</div>
     <div id="footer">
         {% block footer %}
-        Made by <a href="https://github.com/drakeerv">drakeerv</a> - <a href="/info">Instance Info</a>
+        Contribute <a href="https://github.com/drakeerv/pasted">Here</a> - <a href="/info">Instance Info</a>
         {% endblock footer %}
     </div>
 </body>

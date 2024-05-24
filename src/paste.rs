@@ -1,6 +1,6 @@
 use byte_unit::Byte;
 use chrono::DateTime;
-use scraper::{Html, Selector};
+use scraper::{selectable::Selectable, ElementRef, Html, Selector};
 use serde::Serialize;
 
 // pub struct User {
@@ -12,6 +12,7 @@ use serde::Serialize;
 pub struct SimpleUser {
     username: String,
     registered: bool,
+    pro: bool,
     icon_url: String,
 }
 
@@ -44,8 +45,8 @@ pub struct Paste {
     views: u32,
     rating: f32,
     expire: String,
-    is_comment: bool,
-    is_unlisted: bool,
+    comment_for: Option<String>,
+    unlisted: bool,
     num_comments: u32,
     comments: Vec<Comment>,
 }
@@ -71,22 +72,26 @@ pub fn parse_date(date: &str) -> i64 {
         .timestamp()
 }
 
-pub fn parse_simple_user(parent_selector: &str, dom: &Html) -> SimpleUser {
+pub fn parse_simple_user(parent: &ElementRef) -> SimpleUser {
     SimpleUser {
-        username: dom
-            .select(&Selector::parse(&format!("{parent_selector} .username")).unwrap())
+        username: parent
+            .select(&Selector::parse(&".username").unwrap())
             .next()
             .unwrap()
             .text()
             .collect::<String>()
             .trim()
             .to_owned(),
-        registered: dom
-            .select(&Selector::parse(&format!("{parent_selector} .username>a")).unwrap())
+        registered: parent
+            .select(&Selector::parse(&".username>a").unwrap())
             .next()
             .is_some(),
-        icon_url: dom
-            .select(&Selector::parse(&format!("{parent_selector} .user-icon>img")).unwrap())
+        pro: parent
+            .select(&Selector::parse(&".pro").unwrap())
+            .next()
+            .is_some(),
+        icon_url: parent
+            .select(&Selector::parse(&".user-icon>img").unwrap())
             .next()
             .unwrap()
             .value()
@@ -98,9 +103,9 @@ pub fn parse_simple_user(parent_selector: &str, dom: &Html) -> SimpleUser {
     }
 }
 
-pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContainer {
-    let category = dom
-        .select(&Selector::parse(&format!("{parent_selector} span[title=Category]")).unwrap())
+pub fn parse_paste_container(parent: &ElementRef) -> PasteContainer {
+    let category = parent
+        .select(&Selector::parse(&"span[title=Category]").unwrap())
         .next()
         .map(|x| {
             x.text()
@@ -113,7 +118,8 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         });
 
     let size = Byte::parse_str(
-        dom.select(&Selector::parse(&format!("{parent_selector} .left")).unwrap())
+        parent
+            .select(&Selector::parse(".left").unwrap())
             .next()
             .unwrap()
             .text()
@@ -131,8 +137,8 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
     .unwrap_or(Byte::default())
     .as_u64();
 
-    let likes = dom
-        .select(&Selector::parse(&format!("{parent_selector} .-like")).unwrap())
+    let likes = parent
+        .select(&Selector::parse(&".-like").unwrap())
         .next()
         .unwrap()
         .text()
@@ -141,8 +147,8 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         .parse()
         .unwrap();
 
-    let dislikes = dom
-        .select(&Selector::parse(&format!("{parent_selector} .-dislike")).unwrap())
+    let dislikes = parent
+        .select(&Selector::parse(&".-dislike").unwrap())
         .next()
         .unwrap()
         .text()
@@ -151,8 +157,8 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         .parse()
         .unwrap();
 
-    let id = dom
-        .select(&Selector::parse(&format!("{parent_selector} a[href^='/report/']")).unwrap())
+    let id = parent
+        .select(&Selector::parse(&"a[href^='/report/']").unwrap())
         .next()
         .unwrap()
         .value()
@@ -161,8 +167,8 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         .replace("/report/", "")
         .to_owned();
 
-    let format = dom
-        .select(&Selector::parse(&format!("{parent_selector} a.h_800[href^='/archive/']")).unwrap())
+    let format = parent
+        .select(&Selector::parse(&"a.h_800[href^='/archive/']").unwrap())
         .next()
         .unwrap()
         .text()
@@ -170,8 +176,8 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
         .trim()
         .to_owned();
 
-    let content = dom
-        .select(&Selector::parse(&format!("{parent_selector} .source>ol")).unwrap())
+    let content = parent
+        .select(&Selector::parse(&".source>ol").unwrap())
         .next()
         .unwrap()
         .text()
@@ -189,21 +195,28 @@ pub fn parse_paste_container(parent_selector: &str, dom: &Html) -> PasteContaine
     }
 }
 
-pub fn parse_comment(parent_selector: &str, dom: &Html) -> Comment {
-    let author = parse_simple_user(&format!("{parent_selector}"), dom);
+pub fn parse_comment(parent: &ElementRef) -> Comment {
+    let author = parse_simple_user(parent);
 
     let date = parse_date(
-        &dom.select(&Selector::parse(&format!("{parent_selector} .date>span")).unwrap())
+        &parent
+            .select(&Selector::parse(&".date>span").unwrap())
             .next()
             .unwrap()
             .attr("title")
             .unwrap(),
     );
 
-    let container = parse_paste_container(&format!("{parent_selector} .highlighted-code"), dom);
+    // let container = parse_paste_container(&format!("{parent_selector} .highlighted-code"), dom);
+    let container = parse_paste_container(
+        &parent
+            .select(&Selector::parse(".highlighted-code").unwrap())
+            .next()
+            .unwrap(),
+    );
 
-    let num_comments = dom
-        .select(&Selector::parse(&format!("{parent_selector} a[href='#comments']")).unwrap())
+    let num_comments = parent
+        .select(&Selector::parse(&"a[href='#comments']").unwrap())
         .next()
         .map(|x| x.text().collect::<String>().trim().parse().unwrap_or(0))
         .unwrap_or(0);
@@ -217,32 +230,41 @@ pub fn parse_comment(parent_selector: &str, dom: &Html) -> Comment {
 }
 
 pub fn parse_paste(dom: &Html) -> Paste {
-    let parent_selector = ".post-view";
+    let parent = dom
+        .select(&Selector::parse(".post-view").unwrap())
+        .next()
+        .unwrap();
 
-    let title = dom
-        .select(&Selector::parse(&format!("{parent_selector} .info-top>h1")).unwrap())
+    let title = parent
+        .select(&Selector::parse(&".info-top>h1").unwrap())
         .next()
         .map(|x| x.text().collect::<String>());
 
     let tags = dom
-        .select(&Selector::parse(&format!("{parent_selector} .tags>a")).unwrap())
+        .select(&Selector::parse(&".tags>a").unwrap())
         .map(|el| el.text().collect::<String>().to_owned())
         .collect::<Vec<String>>();
 
-    let container = parse_paste_container(&format!("{parent_selector} .highlighted-code"), dom);
+    let container = parse_paste_container(
+        &parent
+            .select(&Selector::parse(".highlighted-code").unwrap())
+            .next()
+            .unwrap(),
+    );
 
-    let author = parse_simple_user(&format!("{parent_selector}"), dom);
+    let author = parse_simple_user(&parent);
 
     let date = parse_date(
-        &dom.select(&Selector::parse(&format!("{parent_selector} .date>span")).unwrap())
+        &parent
+            .select(&Selector::parse(&".date>span").unwrap())
             .next()
             .unwrap()
             .attr("title")
             .unwrap(),
     );
 
-    let views = dom
-        .select(&Selector::parse(&format!("{parent_selector} .visits")).unwrap())
+    let views = parent
+        .select(&Selector::parse(&".visits").unwrap())
         .next()
         .unwrap()
         .text()
@@ -251,8 +273,8 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .parse()
         .unwrap();
 
-    let rating = dom
-        .select(&Selector::parse(&format!("{parent_selector} .rating")).unwrap())
+    let rating = parent
+        .select(&Selector::parse(&".rating").unwrap())
         .next()
         .unwrap()
         .text()
@@ -261,8 +283,8 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .parse()
         .unwrap();
 
-    let expire = dom
-        .select(&Selector::parse(&format!("{parent_selector} .expire")).unwrap())
+    let expire = parent
+        .select(&Selector::parse(&".expire").unwrap())
         .next()
         .unwrap()
         .text()
@@ -270,15 +292,42 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .trim()
         .to_owned();
 
-    let is_comment = title.is_none();
+    let comment_for = parent
+        .select(&Selector::parse(&".notice").unwrap())
+        .find_map(|el| {
+            if el
+                .select(&Selector::parse(&"b").unwrap())
+                .next()
+                .unwrap()
+                .text()
+                .collect::<String>()
+                .trim()
+                == "This is comment for paste"
+            {
+                Some(
+                    el.select(&Selector::parse("a").unwrap())
+                    .next()
+                    .unwrap()
+                    .attr("href")
+                    .unwrap()
+                    .replace("/", "")
+                    .split_once("#")
+                    .unwrap()
+                    .0
+                    .to_owned(),
+                )
+            } else {
+                None
+            }
+        });
 
-    let is_unlisted = dom
-        .select(&Selector::parse(&format!("{parent_selector} .unlisted")).unwrap())
+    let unlisted = parent
+        .select(&Selector::parse(&".unlisted").unwrap())
         .next()
         .is_some();
 
-    let num_comments = dom
-        .select(&Selector::parse(&format!("{parent_selector} div[title=Comments]>a")).unwrap())
+    let num_comments = parent
+        .select(&Selector::parse(&"div[title=Comments]>a").unwrap())
         .next()
         .unwrap()
         .text()
@@ -287,17 +336,10 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .parse()
         .unwrap_or(0);
 
-    let comments = dom
-        .select(&Selector::parse(&format!("{parent_selector} .comments__list>ul>li")).unwrap())
-        .enumerate()
-        .map(|(i, _)| {
-            parse_comment(
-                &format!(
-                    "{parent_selector} .comments__list>ul>li:nth-child({})",
-                    i + 1
-                ),
-                dom,
-            )
+    let comments = parent
+        .select(&Selector::parse(&".comments__list>ul>li").unwrap())
+        .map(|el| {
+            parse_comment(&el)
         })
         .collect::<Vec<Comment>>();
 
@@ -310,8 +352,8 @@ pub fn parse_paste(dom: &Html) -> Paste {
         views,
         rating,
         expire,
-        is_comment,
-        is_unlisted,
+        comment_for,
+        unlisted,
         num_comments,
         comments,
     }

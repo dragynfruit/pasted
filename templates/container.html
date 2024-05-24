@@ -7,7 +7,6 @@
         height: 100%;
         background-color: var(--background-primary-color);
         border: 1px solid var(--background-secondary-color);
-        border-radius: 5px;
         overflow: hidden;
     }
 
@@ -35,6 +34,10 @@
 
     .container-top-left > * {
         margin-right: 10px;
+    }
+
+    .container-top-right > * {
+        margin-left: 10px;
     }
 
     .container-bottom {
@@ -70,6 +73,12 @@
             <p class="container-dislikes" title="Dislikes">{{ container.dislikes }} 👎</p>
         </div>
         <div class="container-top-right">
+            <a href="/raw/{{ container.id }}" title="Raw">Raw</a>
+            <a href="/dl/{{ container.id }}" title="Download">Download</a>
+            <a href="/clone/{{ container.id }}" title="Clone">Clone</a>
+            <a href="/embed/{{ container.id }}" title="Embed">Embed</a>
+            <a href="/print/{{ container.id }}" title="Print">Print</a>
+            <a href="/{{ container.id }}" title="View">View</a>
         </div>
     </div>
     <div class="container-bottom">
