@@ -95,7 +95,7 @@
 <div id="paste">
     <div class="header">
         <div class="header-left">
-            <img src="{{author.icon_url}}">
+            <img src="{{author.icon_url}}" alt="{{author.username}} icon">
         </div>
         <div class="header-top">
             {% if comment_for %}
@@ -128,16 +128,9 @@
         <ul id="comments">
             {% for comment in comments %}
             <li>
-                <!-- <img src="{{ comment.author.icon_url }}" alt="{{ comment.author.username }}">
-                {% if comment.author.registered %}
-                <a href="/{{ comment.author.username }}">{{ comment.author.username }}</a> |
-                {% else %}
-                <span>{{ comment.author.username }}</span> |
-                {% endif %}
-                <span>{{ comment.date | format_date_user }}</span> -->
                 <div class="header">
                     <div class="header-left">
-                        <img src="{{ comment.author.icon_url }}">
+                        <img src="{{ comment.author.icon_url }}" alt="{{ comment.author.username }} icon">
                     </div>
                     <div class="header-top">
                         {% if comment.author.registered %}
