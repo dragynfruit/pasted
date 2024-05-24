@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Home{% endblock title %}
+{% block title %}Embed{% endblock title %}
 {% block head %}
 {{ super() }}
 <style>
@@ -11,7 +11,7 @@
 <p>Embedding Pasted is easy! Just add the following code to your website:</p>
 <pre><code>&lt;iframe src="https://(instance_url)/embed_iframe/{{ id }}"&gt;&lt;/iframe&gt;</code></pre>
 <p>It looks like this:</p>
-<iframe src="/embed_iframe/{{ id }}" width="100%" height="400px"></iframe>
+<iframe src="/embed_iframe/{{ id }}" width="50%" height="400px"></iframe>
 <h2>JavaScript</h2>
 <p>You can also use JS to embed a paste! I personaly don't recomend this and it is just kept for pastebin compatibility.</p>
 <pre><code>&lt;script src="https://(instance_url)/embed_js/{{ id }}"&gt;&lt;/script&gt;</code></pre>
