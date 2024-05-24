@@ -1,10 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-    
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Home{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+</style>
+{% endblock head %}
+{% block content %}
+<h1>Embed Pasted</h1>
+<h2>Iframe</h2>
+<p>Embedding Pasted is easy! Just add the following code to your website:</p>
+<pre><code>&lt;iframe src="https://(instance_url)/embed_iframe/{{ id }}"&gt;&lt;/iframe&gt;</code></pre>
+<p>It looks like this:</p>
+<iframe src="/embed_iframe/{{ id }}" width="100%" height="400px"></iframe>
+<h2>JavaScript</h2>
+<p>You can also use JS to embed a paste! I personaly don't recomend this and it is just kept for pastebin compatibility.</p>
+<pre><code>&lt;script src="https://(instance_url)/embed_js/{{ id }}"&gt;&lt;/script&gt;</code></pre>
+{% endblock content %}

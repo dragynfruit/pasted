@@ -46,6 +46,28 @@
         overflow: auto;
     }
 
+    .desktop-buttons {
+        display: block;
+    }
+
+    .mobile-buttons {
+        display: none;
+    }
+
+    .mobile-buttons select {
+        padding: 5px;
+    }
+
+    @media (max-width: 650px) {
+        .desktop-buttons {
+            display: none;
+        }
+
+        .mobile-buttons {
+            display: block;
+        }
+    }
+
     pre {
         margin: 0;
         padding: 0;
@@ -73,12 +95,33 @@
             <p class="container-dislikes" title="Dislikes">{{ container.dislikes }} 👎</p>
         </div>
         <div class="container-top-right">
-            <a href="/raw/{{ container.id }}" title="Raw">Raw</a>
-            <a href="/dl/{{ container.id }}" title="Download">Download</a>
-            <a href="/clone/{{ container.id }}" title="Clone">Clone</a>
-            <a href="/embed/{{ container.id }}" title="Embed">Embed</a>
-            <a href="/print/{{ container.id }}" title="Print">Print</a>
-            <a href="/{{ container.id }}" title="View">View</a>
+            {% set button_names = [
+                "Raw",
+                "Download",
+                "Clone",
+                "Embed",
+                "Print",
+                "View"
+            ] %}
+            {% set button_links = [
+                "/raw/" ~ container.id,
+                "/dl/" ~ container.id,
+                "/clone/" ~ container.id,
+                "/embed/" ~ container.id,
+                "/print/" ~ container.id,
+                "/" ~ container.id
+            ] %}
+            <div class="desktop-buttons">
+                {% for i in range(end=button_names|length) %}
+                <a href="{{ button_links[i] }}" title="{{ button_names[i] }}">{{ button_names[i] }}</a>
+                {% endfor %}
+            </div>
+            <select class="mobile-buttons" onchange="window.location.href = this.value" value="choose">
+                <option value="choose">Choose</option>
+                {% for i in range(end=button_names|length) %}
+                <option value="{{ button_links[i] }}">{{ button_names[i] }}</option>
+                {% endfor %}
+            </select>
         </div>
     </div>
     <div class="container-bottom">

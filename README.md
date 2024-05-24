@@ -18,8 +18,11 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Make info api
 - [x] Comments
 - [x] Make simple paste view page
-- [ ] Embed paste
-- [ ] Clone Paste
+- [x] Embed paste
+- [x] Clone Paste
+- [x] Mobile layout
+- [ ] Error Handling
+- [ ] Password protected pastes
 - [ ] User pages
 - [ ] Archive page
 - [ ] View deleted pastes

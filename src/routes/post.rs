@@ -24,7 +24,7 @@ struct Post {
     expiration: String,
     exposure: u8,
     password: String,
-    name: String,
+    title: String,
 }
 
 pub fn get_router(client: Client) -> Router {
@@ -37,8 +37,10 @@ async fn index() -> impl IntoResponse {
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
+        
+        .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::new(
-            TEMPLATES.render("index.html", &Context::new()).unwrap(),
+            TEMPLATES.render("post.html", &Context::new()).unwrap(),
         ))
         .unwrap()
 }
@@ -73,7 +75,7 @@ async fn post(State(client): State<Client>, Form(data): Form<Post>) -> impl Into
             if data.expiration == "B" { "1" } else { "0" },
         )
         .unwrap()
-        .add_text("PostForm[name]", &data.name)
+        .add_text("PostForm[name]", &data.title)
         .unwrap()
         .add_text("PostForm[is_guest]", "1")
         .unwrap()
@@ -97,8 +99,6 @@ async fn post(State(client): State<Client>, Form(data): Form<Post>) -> impl Into
         .status(response.status())
         .header("Location", format!("/{paste_id}"))
         .header("Content-Type", "text/html")
-        .body(Body::new(
-            TEMPLATES.render("index.html", &Context::new()).unwrap(),
-        ))
+        .body(Body::empty())
         .unwrap()
 }

@@ -1,0 +1,94 @@
+<style>
+    :root {
+        --primary-color: #b400d8;
+        --secondary-color: #7a00a3;
+        --background-primary-color: #f8f9fa;
+        --background-secondary-color: #cbcbcb;
+        --text-color: #333;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --background-primary-color: #121212;
+            --background-secondary-color: #333;
+            --text-color: #f8f9fa;
+        }
+    }
+
+    html,
+    body {
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        background-color: var(--background-primary-color);
+        color: var(--text-color);
+        padding: 0;
+        margin: 0;
+    }
+
+    #nav {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        background-color: var(--background-secondary-color);
+    }
+
+    #nav>h1 {
+        margin-top: 1rem;
+        margin-left: 1rem;
+    }
+
+    #nav>h1>a {
+        text-decoration: none;
+        color: var(--primary-color);
+    }
+
+    input {
+        padding: 0.5rem;
+        border: 0;
+        background-color: var(--background-secondary-color);
+        color: var(--text-color);
+        outline: transparent;
+    }
+
+    textarea {
+        padding: 0.5rem;
+        border: 0;
+        background-color: var(--background-secondary-color);
+        color: var(--text-color);
+        resize: none;
+        outline: transparent;
+    }
+
+    button {
+        padding: 0.5rem;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: var(--secondary-color);
+    }
+
+    select {
+        background-color: var(--background-secondary-color);
+        color: var(--text-color);
+        border: 0;
+        padding: 0.5rem;
+    }
+
+    a {
+        text-decoration: none;
+        color: var(--primary-color);
+    }
+
+    #content {
+        margin-bottom: 0.5rem;
+    }
+
+    #footer {
+        padding: 0.5rem;
+        text-align: center;
+        background-color: var(--background-secondary-color);
+    }
+</style>

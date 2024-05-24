@@ -50,7 +50,7 @@
 {% block content %}
 <form action="/" method="post" id="post">
     <div id="left">
-        <textarea name="text" placeholder="Enter paste here" required></textarea>
+        <textarea name="text" placeholder="Enter paste here" required>{% if container.content %}{{ container.content }}{% endif %}</textarea>
     </div>
     <div id="right">
         <label for="category">Category</label>
@@ -81,7 +81,7 @@
             <option value="26">Writing</option>
         </select>
         <label for="tags">Tags</label>
-        <input type="text" name="tags" placeholder="Tags">
+        <input type="text" name="tags" placeholder="Tags" value="{% if tags %}{{ tags | join(sep=",") }}{% endif %}">
         <label for="format">Format</label>
         <select name="format" value="1">
             <option value="1">None</option>
@@ -394,8 +394,8 @@
         </select>
         <label for="password">Password</label>
         <input type="password" name="password" placeholder="Password">
-        <label for="name">Name</label>
-        <input type="text" name="name" placeholder="Name">
+        <label for="title">Title</label>
+        <input type="text" name="title" placeholder="Title" value="{% if title %}{{ title }}{% endif %}">
         <button type="submit">Submit</button>
     </div>
 </form>

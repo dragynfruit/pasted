@@ -114,6 +114,9 @@
             <span>{{ author.username }}</span> |
             {% endif %}
             <span>{{ date | format_date_user }}</span> |
+            {% if unlisted %}
+            <span>👻</span> |
+            {% endif %}
             <span>{{ rating }} ⭐ </span> |
             <span>{{ views }} 👁️</span> |
             <span>{{ expire }} ⏰</span> |

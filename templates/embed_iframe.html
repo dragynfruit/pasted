@@ -1,0 +1,28 @@
+{% import "container.html" as container_macros %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="/favicon.png">
+
+    {% include "style.html" %}
+
+    {{ container_macros::generate_style() }}
+
+    <style>
+        #credit {
+            width: 100%;
+            text-align: center;
+            margin-top: -10px;
+        }
+    </style>
+</head>
+<body>
+    {{ container_macros::generate_container(container=container) }}
+    <div id="credit">
+        <p>Hosted by <a href="https://github.com/drakeerv/pasted">Pasted</a></p>
+    </div>
+</body>
+</html>
