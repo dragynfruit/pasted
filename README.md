@@ -22,7 +22,7 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Clone Paste
 - [x] Mobile layout
 - [ ] Error Handling
-- [ ] Password protected pastes
-- [ ] User pages
+- [x] Password protected pastes
+- [ ] User page
 - [ ] Archive page
 - [ ] View deleted pastes

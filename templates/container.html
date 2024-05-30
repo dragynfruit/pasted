@@ -89,10 +89,12 @@
             <span>|</span>
             <p class="container-category" title="Category">{{ container.category }}</p>
             {% endif %}
+            {% if container.likes and container.dislikes %}
             <span>|</span>
             <p class="container-likes" title="Likes">{{ container.likes }} 👍</p>
             <span>/</span>
             <p class="container-dislikes" title="Dislikes">{{ container.dislikes }} 👎</p>
+            {% endif %}
         </div>
         <div class="container-top-right">
             {% set button_names = [

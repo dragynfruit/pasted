@@ -20,8 +20,8 @@ pub struct SimpleUser {
 pub struct PasteContainer {
     category: Option<String>,
     size: u64,
-    likes: u32,
-    dislikes: u32,
+    likes: Option<u32>,
+    dislikes: Option<u32>,
     id: String,
     format: String,
     content: String,
@@ -47,8 +47,9 @@ pub struct Paste {
     expire: String,
     comment_for: Option<String>,
     unlisted: bool,
-    num_comments: u32,
+    num_comments: Option<u32>,
     comments: Vec<Comment>,
+    locked: bool,
 }
 
 pub fn get_csrftoken(dom: Html) -> String {
@@ -140,22 +141,12 @@ pub fn parse_paste_container(parent: &ElementRef) -> PasteContainer {
     let likes = parent
         .select(&Selector::parse(&".-like").unwrap())
         .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .parse()
-        .unwrap();
+        .map(|x| x.text().collect::<String>().trim().parse().unwrap());
 
     let dislikes = parent
         .select(&Selector::parse(&".-dislike").unwrap())
         .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .parse()
-        .unwrap();
+        .map(|x| x.text().collect::<String>().trim().parse().unwrap());
 
     let id = parent
         .select(&Selector::parse(&"a[href^='/report/']").unwrap())
@@ -207,7 +198,6 @@ pub fn parse_comment(parent: &ElementRef) -> Comment {
             .unwrap(),
     );
 
-    // let container = parse_paste_container(&format!("{parent_selector} .highlighted-code"), dom);
     let container = parse_paste_container(
         &parent
             .select(&Selector::parse(".highlighted-code").unwrap())
@@ -227,6 +217,12 @@ pub fn parse_comment(parent: &ElementRef) -> Comment {
         container,
         num_comments,
     }
+}
+
+pub fn is_locked(dom: &Html) -> bool {
+    dom.select(&Selector::parse("#postpasswordverificationform-password").unwrap())
+        .next()
+        .is_some()
 }
 
 pub fn parse_paste(dom: &Html) -> Paste {
@@ -306,15 +302,15 @@ pub fn parse_paste(dom: &Html) -> Paste {
             {
                 Some(
                     el.select(&Selector::parse("a").unwrap())
-                    .next()
-                    .unwrap()
-                    .attr("href")
-                    .unwrap()
-                    .replace("/", "")
-                    .split_once("#")
-                    .unwrap()
-                    .0
-                    .to_owned(),
+                        .next()
+                        .unwrap()
+                        .attr("href")
+                        .unwrap()
+                        .replace("/", "")
+                        .split_once("#")
+                        .unwrap()
+                        .0
+                        .to_owned(),
                 )
             } else {
                 None
@@ -329,19 +325,14 @@ pub fn parse_paste(dom: &Html) -> Paste {
     let num_comments = parent
         .select(&Selector::parse(&"div[title=Comments]>a").unwrap())
         .next()
-        .unwrap()
-        .text()
-        .collect::<String>()
-        .trim()
-        .parse()
-        .unwrap_or(0);
+        .map(|x| x.text().collect::<String>().trim().parse().unwrap_or(0));
 
     let comments = parent
         .select(&Selector::parse(&".comments__list>ul>li").unwrap())
-        .map(|el| {
-            parse_comment(&el)
-        })
+        .map(|el| parse_comment(&el))
         .collect::<Vec<Comment>>();
+
+    let locked = num_comments.is_none();
 
     Paste {
         title,
@@ -356,5 +347,6 @@ pub fn parse_paste(dom: &Html) -> Paste {
         unlisted,
         num_comments,
         comments,
+        locked,
     }
 }

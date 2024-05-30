@@ -1,9 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Error{% endblock title %}
+{% block title %}404{% endblock title %}
 {% block head %}
 {{ super() }}
 <style>
 </style>
 {% endblock head %}
 {% block content %}
+<h1>{status}</h1>
+{% if message %}
+<h2>{message}</h2>
+{% else %}
+{% if status == 404 %}
+<h2>Page not found</h2>
+{% elif status == 403 %}
+<h2>Forbidden</h2>
+{% elif status == 500 %}
+<h2>Internal Server Error</h2>
+{% else %}
+<h2>Unknown error</h2>
+{% endif %}
+{% endif %}
+<h3><a href="/">Home</a></h3>
 {% endblock content %}

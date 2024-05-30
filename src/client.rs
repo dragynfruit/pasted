@@ -13,12 +13,28 @@ impl Client {
         }
     }
 
-    pub fn get_agent(&self) -> &Agent {
-        &self.agent
+    // pub fn get_agent(&self) -> &Agent {
+    //     &self.agent
+    // }
+
+    pub fn get_response(&self, url: &str) -> ureq::Response {
+        self.agent.get(url).call().unwrap()
+    }
+
+    pub fn post_response(&self, url: &str, form: (String, Vec<u8>)) -> ureq::Response {
+        self.agent
+            .post(url)
+            .set("Content-Type", &form.0)
+            .send_bytes(&form.1)
+            .unwrap()
     }
 
     pub fn get_string(&self, url: &str) -> String {
-        self.agent.get(url).call().unwrap().into_string().unwrap()
+        self.get_response(url).into_string().unwrap()
+    }
+
+    pub fn post_string(&self, url: &str, form: (String, Vec<u8>)) -> String {
+        self.post_response(url, form).into_string().unwrap()
     }
 
     pub fn get_bytes(&self, url: &str) -> Vec<u8> {
@@ -35,5 +51,9 @@ impl Client {
 
     pub fn get_html(&self, url: &str) -> Html {
         Html::parse_document(&&self.get_string(url))
+    }
+
+    pub fn post_html(&self, url: &str, form: (String, Vec<u8>)) -> Html {
+        Html::parse_document(&self.post_string(url, form))
     }
 }

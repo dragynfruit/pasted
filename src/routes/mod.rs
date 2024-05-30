@@ -2,6 +2,7 @@ use axum::Router;
 
 use crate::client::Client;
 
+mod error;
 mod imgs;
 mod info;
 mod post;
@@ -17,4 +18,5 @@ pub fn get_router(client: Client) -> Router {
         .nest("/", post::get_router(client.clone()))
         .nest("/", public::get_router())
         .nest("/", view::get_router(client.clone()))
+        .fallback(error::error_404)
 }

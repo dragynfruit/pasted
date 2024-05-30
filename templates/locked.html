@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Locked{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+</style>
+{% endblock head %}
+{% block content %}
+<h1>This paste is locked</h1>
+<form method="post" action="/{{ id }}">
+    <label for="password">Password:</label>
+    <input type="password" name="password" placeholder="Password">
+    <input type="submit" value="Unlock">
+</form>
+{% endblock content %}

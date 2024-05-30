@@ -115,7 +115,9 @@
             {% endif %}
             <span>{{ date | format_date_user }}</span> |
             {% if unlisted %}
-            <span>👻</span> |
+            <span>🔗</span> |
+            {% elif locked %}
+            <span>🔒</span> |
             {% endif %}
             <span>{{ rating }} ⭐ </span> |
             <span>{{ views }} 👁️</span> |
@@ -126,6 +128,7 @@
 
     {{ container_macros::generate_container(container=container) }}
 
+    {% if not is_locked %}
     <div id="comments">
         <h2>Comments</h2>
         <ul id="comments">
@@ -154,5 +157,6 @@
             {% endfor %}
         </ul>
     </div>
+    {% endif %}
 </div>
 {% endblock content %}

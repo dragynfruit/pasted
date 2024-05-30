@@ -82,12 +82,7 @@ async fn post(State(client): State<Client>, Form(data): Form<Post>) -> impl Into
         .finish()
         .unwrap();
 
-    let response = client
-        .get_agent()
-        .post(format!("{URL}/").as_str())
-        .set("Content-Type", &form.0)
-        .send_bytes(&form.1)
-        .unwrap();
+    let response = client.post_response(format!("{URL}/").as_str(), form);
     let paste_id = response
         .header("Location")
         .unwrap()
