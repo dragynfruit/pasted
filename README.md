@@ -23,6 +23,7 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Mobile layout
 - [ ] Error Handling
 - [x] Password protected pastes
+- [x] Burn on read
 - [ ] User page
 - [ ] Archive page
 - [ ] View deleted pastes

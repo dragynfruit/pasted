@@ -52,7 +52,7 @@ pub struct Paste {
     locked: bool,
 }
 
-pub fn get_csrftoken(dom: Html) -> String {
+pub fn get_csrftoken(dom: &Html) -> String {
     dom.select(&Selector::parse("meta[name=csrf-token]").unwrap())
         .next()
         .unwrap()
@@ -221,6 +221,12 @@ pub fn parse_comment(parent: &ElementRef) -> Comment {
 
 pub fn is_locked(dom: &Html) -> bool {
     dom.select(&Selector::parse("#postpasswordverificationform-password").unwrap())
+        .next()
+        .is_some()
+}
+
+pub fn is_burn(dom: &Html) -> bool {
+    dom.select(&Selector::parse(".burn, .-burn").unwrap())
         .next()
         .is_some()
 }

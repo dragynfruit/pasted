@@ -29,11 +29,11 @@ struct Post {
 
 pub fn get_router(client: Client) -> Router {
     Router::new()
-        .route("/", routing::get(index).post(post))
+        .route("/", routing::get(post).post(post_create))
         .with_state(client)
 }
 
-async fn index() -> impl IntoResponse {
+async fn post() -> impl IntoResponse {
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
@@ -45,8 +45,8 @@ async fn index() -> impl IntoResponse {
         .unwrap()
 }
 
-async fn post(State(client): State<Client>, Form(data): Form<Post>) -> impl IntoResponse {
-    let csrf = get_csrftoken(client.get_html(format!("{URL}/").as_str()));
+async fn post_create(State(client): State<Client>, Form(data): Form<Post>) -> impl IntoResponse {
+    let csrf = get_csrftoken(&client.get_html(format!("{URL}/").as_str()));
 
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)

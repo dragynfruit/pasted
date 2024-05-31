@@ -5,7 +5,10 @@ use crate::{
     templates::TEMPLATES,
 };
 use axum::{
-    body::Body, extract::{Path, State}, response::{IntoResponse, Response}, routing, Form, Json, Router
+    body::Body,
+    extract::{Path, State},
+    response::{IntoResponse, Response},
+    routing, Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use tera::Context;
@@ -16,9 +19,15 @@ struct Page {
     id: String,
 }
 
+#[derive(Serialize)]
+struct LockScreen {
+    id: String,
+    burn: bool,
+}
+
 #[derive(Deserialize)]
-struct Lock {
-    password: String,
+struct Unlock {
+    password: Option<String>,
 }
 
 pub fn get_router(client: Client) -> Router {
@@ -148,13 +157,19 @@ async fn view_embed_iframe(
         .unwrap()
 }
 
-async fn view_locked(State(client): State<Client>, Path(id): Path<String>, Form(data): Form<Lock>) -> impl IntoResponse {
-    let csrf = paste::get_csrftoken(client.get_html(format!("{URL}/{id}").as_str()));
-    
+async fn view_locked(
+    State(client): State<Client>,
+    Path(id): Path<String>,
+    Form(data): Form<Unlock>,
+) -> impl IntoResponse {
+    let csrf = paste::get_csrftoken(&client.get_html(format!("{URL}/{id}").as_str()));
+
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)
         .unwrap()
-        .add_text("PostPasswordVerificationForm[password]", &data.password)
+        .add_text("PostPasswordVerificationForm[password]", &data.password.unwrap_or("".to_owned()))
+        .unwrap()
+        .add_text("is_burn", "1")
         .unwrap()
         .finish()
         .unwrap();
@@ -163,14 +178,14 @@ async fn view_locked(State(client): State<Client>, Path(id): Path<String>, Form(
     let paste = paste::parse_paste(&dom);
 
     Response::builder()
-    .status(200)
-    .header("Content-Type", "text/html")
-    .body(Body::from(
-        TEMPLATES
-            .render("view.html", &Context::from_serialize(paste).unwrap())
-            .unwrap(),
-    ))
-    .unwrap()
+        .status(200)
+        .header("Content-Type", "text/html")
+        .body(Body::from(
+            TEMPLATES
+                .render("view.html", &Context::from_serialize(paste).unwrap())
+                .unwrap(),
+        ))
+        .unwrap()
 }
 
 async fn view(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
@@ -181,7 +196,30 @@ async fn view(State(client): State<Client>, Path(id): Path<String>) -> impl Into
             .header("Content-Type", "text/html")
             .body(Body::from(
                 TEMPLATES
-                    .render("locked.html", &Context::from_serialize(Page { id }).unwrap())
+                    .render(
+                        "locked.html",
+                        &Context::from_serialize(LockScreen {
+                            id,
+                            burn: paste::is_burn(&dom),
+                        })
+                        .unwrap(),
+                    )
+                    .unwrap(),
+            ))
+            .unwrap();
+    } else if paste::is_burn(&dom) {
+        return Response::builder()
+            .status(200)
+            .header("Content-Type", "text/html")
+            .body(Body::from(
+                TEMPLATES
+                    .render(
+                        "burn.html",
+                        &Context::from_serialize(Page {
+                            id
+                        })
+                        .unwrap(),
+                    )
                     .unwrap(),
             ))
             .unwrap();

@@ -7,6 +7,9 @@
 {% endblock head %}
 {% block content %}
 <h1>This paste is locked</h1>
+{% if burn %}
+<h2 id="burn">This paste will be burnt after read</h2>
+{% endif %}
 <form method="post" action="/{{ id }}">
     <label for="password">Password:</label>
     <input type="password" name="password" placeholder="Password">
