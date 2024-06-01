@@ -96,6 +96,7 @@
             <p class="container-dislikes" title="Dislikes">{{ container.dislikes }} 👎</p>
             {% endif %}
         </div>
+        {% if container.id %}
         <div class="container-top-right">
             {% set button_names = [
                 "Raw",
@@ -125,6 +126,7 @@
                 {% endfor %}
             </select>
         </div>
+        {% endif %}
     </div>
     <div class="container-bottom">
         <pre class="container-content">{{ container.content }}</pre>

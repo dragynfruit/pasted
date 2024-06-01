@@ -22,7 +22,7 @@ pub struct PasteContainer {
     size: u64,
     likes: Option<u32>,
     dislikes: Option<u32>,
-    id: String,
+    id: Option<String>,
     format: String,
     content: String,
 }
@@ -151,12 +151,13 @@ pub fn parse_paste_container(parent: &ElementRef) -> PasteContainer {
     let id = parent
         .select(&Selector::parse(&"a[href^='/report/']").unwrap())
         .next()
-        .unwrap()
-        .value()
-        .attr("href")
-        .unwrap()
-        .replace("/report/", "")
-        .to_owned();
+        .map(|x| {
+            x.value()
+                .attr("href")
+                .unwrap()
+                .replace("/report/", "")
+                .to_owned()
+        });
 
     let format = parent
         .select(&Selector::parse(&"a.h_800[href^='/archive/']").unwrap())
@@ -298,9 +299,8 @@ pub fn parse_paste(dom: &Html) -> Paste {
         .select(&Selector::parse(&".notice").unwrap())
         .find_map(|el| {
             if el
-                .select(&Selector::parse(&"b").unwrap())
-                .next()
-                .unwrap()
+                .select(&Selector::parse(&"*:first-child").unwrap())
+                .next()?
                 .text()
                 .collect::<String>()
                 .trim()
