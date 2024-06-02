@@ -187,49 +187,38 @@ async fn view_locked(
 
 async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-    if paste::is_locked(&dom) {
-        return Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::from(
-                TEMPLATES
-                    .render(
-                        "locked.html",
-                        &Context::from_serialize(LockScreen {
-                            id,
-                            burn: paste::is_burn(&dom),
-                        })
-                        .unwrap(),
-                    )
-                    .unwrap(),
-            ))
-            .unwrap();
-    } else if paste::is_burn(&dom) {
-        return Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::from(
-                TEMPLATES
-                    .render(
-                        "burn.html",
-                        &Context::from_serialize(Page {
-                            id
-                        })
-                        .unwrap(),
-                    )
-                    .unwrap(),
-            ))
-            .unwrap();
-    }
 
-    let paste = paste::parse_paste(&dom);
+    let renderd = if paste::is_locked(&dom) {
+        TEMPLATES
+            .render(
+                "locked.html",
+                &Context::from_serialize(LockScreen {
+                    id,
+                    burn: paste::is_burn(&dom),
+                })
+                .unwrap(),
+            )
+            .unwrap()
+    } else if paste::is_burn(&dom) {
+        TEMPLATES
+            .render(
+                "burn.html",
+                &Context::from_serialize(Page {
+                    id
+                })
+                .unwrap(),
+            )
+            .unwrap()
+    } else {
+        let paste = paste::parse_paste(&dom);
+        TEMPLATES
+            .render("view.html", &Context::from_serialize(paste).unwrap())
+            .unwrap()
+    };
+
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
-        .body(Body::from(
-            TEMPLATES
-                .render("view.html", &Context::from_serialize(paste).unwrap())
-                .unwrap(),
-        ))
+        .body(Body::from(renderd))
         .unwrap()
 }
