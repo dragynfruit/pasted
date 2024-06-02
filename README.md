@@ -21,10 +21,11 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Embed paste
 - [x] Clone Paste
 - [x] Mobile layout
-- [ ] Error Handling
+- [ ] Error handling
 - [x] Password protected pastes
 - [x] Burn on read
 - [x] Icon cache
 - [ ] User page
 - [ ] Archive page
 - [ ] View deleted pastes
+- [X] Last edited

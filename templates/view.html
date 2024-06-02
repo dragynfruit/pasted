@@ -15,7 +15,11 @@
 
 <meta name="article:author" content="{{ author.username }}">
 <meta name="article:published_time" content="{{ date | format_date }}">
-<meta name="article:modified_time" content="{{ date | format_date }}">
+{% if edit_date %}
+    <meta name="article:modified_time" content="{{ edit_date | format_date }}">
+{% else %}
+    <meta name="article:modified_time" content="{{ date | format_date }}">
+{% endif %}
 <meta name="article:section" content="{{ container.category }}">
 <meta name="article:tag" content="{{ tags }}">
 
@@ -32,12 +36,17 @@
 <style>
     #paste {
         margin: 0 auto;
-        max-width: 800px;
+        max-width: 1200px;
         padding: 20px;
     }
 
     .pro {
         color: #d4d800;
+    }
+
+    .edited {
+        color: #ff0000;
+        text-decoration: underline;
     }
 
     .header {
@@ -113,7 +122,11 @@
             {% else %}
             <span>{{ author.username }}</span> |
             {% endif %}
+            {% if edit_date %}
+            <span>{{ edit_date | format_date_user }}</span> <span class="edited" title="Original: {{ date | format_date_user }}">(Edited)</span> |
+            {% else %}
             <span>{{ date | format_date_user }}</span> |
+            {% endif %}
             {% if unlisted %}
             <span>🔗</span> |
             {% elif locked %}
@@ -149,7 +162,11 @@
                         {% endif %}
                     </div>
                     <div class="header-bottom">
+                        {% if comment.edit_date %}
+                        <span>{{ comment.edit_date | format_date_user }}</span> <span class="edited" title="Original: {{ comment.date | format_date_user }}">(Edited)</span>
+                        {% else %}
                         <span>{{ comment.date | format_date_user }}</span>
+                        {% endif %}
                     </div>
                 </div>
                 {{ container_macros::generate_container(container=comment.container) }}

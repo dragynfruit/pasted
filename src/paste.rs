@@ -31,6 +31,7 @@ pub struct PasteContainer {
 pub struct Comment {
     author: SimpleUser,
     date: i64,
+    edit_date: Option<i64>,
     container: PasteContainer,
     num_comments: u32,
 }
@@ -42,6 +43,7 @@ pub struct Paste {
     container: PasteContainer,
     author: SimpleUser,
     date: i64,
+    edit_date: Option<i64>,
     views: u32,
     rating: f32,
     expire: String,
@@ -199,6 +201,11 @@ pub fn parse_comment(parent: &ElementRef) -> Comment {
             .unwrap(),
     );
 
+    let edit_date = parent
+        .select(&Selector::parse(&".date>span:nth-child(2)").unwrap())
+        .next()
+        .map(|x| parse_date(x.attr("title").unwrap().split_once(":").unwrap().1.trim()));
+
     let container = parse_paste_container(
         &parent
             .select(&Selector::parse(".highlighted-code").unwrap())
@@ -215,6 +222,7 @@ pub fn parse_comment(parent: &ElementRef) -> Comment {
     Comment {
         author,
         date,
+        edit_date,
         container,
         num_comments,
     }
@@ -265,6 +273,11 @@ pub fn parse_paste(dom: &Html) -> Paste {
             .attr("title")
             .unwrap(),
     );
+
+    let edit_date = parent
+        .select(&Selector::parse(&".date>span:nth-child(2)").unwrap())
+        .next()
+        .map(|x| parse_date(x.attr("title").unwrap().split_once(":").unwrap().1.trim()));
 
     let views = parent
         .select(&Selector::parse(&".visits").unwrap())
@@ -346,6 +359,7 @@ pub fn parse_paste(dom: &Html) -> Paste {
         container,
         author,
         date,
+        edit_date,
         views,
         rating,
         expire,
