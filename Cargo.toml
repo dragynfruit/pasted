@@ -1,11 +1,9 @@
 [package]
 name = "pasted"
-version = "1.1.8"
+version = "1.1.9"
 edition = "2021"
 authors = ["drakeerv <drakeerv@outlook.com>"]
 description = "A pastebin frontend written in Rust"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 axum = "0.7.5"

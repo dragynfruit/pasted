@@ -32,12 +32,12 @@
         <td>{{ version }}</td>
     </tr>
     <tr>
-        <td>Start Time</td>
-        <td>{{ start_time }}</td>
-    </tr>
-    <tr>
         <td>Is Release</td>
         <td>{{ is_release }}</td>
+    </tr>
+    <tr>
+        <td>DB Size</td>
+        <td>{{ db_size | format_bytes }}</td>
     </tr>
 </table>
 {% endblock content %}
