@@ -370,3 +370,81 @@ pub fn parse_paste(dom: &Html) -> Paste {
         locked,
     }
 }
+
+// test
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_csrftoken() {
+        let dom = Html::parse_document(
+            r#"
+            <html>
+                <head>
+                    <meta name="csrf-token" content="token">
+                </head>
+            </html>
+        "#,
+        );
+
+        assert_eq!(get_csrftoken(&dom), "token");
+    }
+
+    #[test]
+    fn test_parse_date() {
+        assert_eq!(
+            parse_date("Thursday 2nd of May 2024 10:05:29 AM CDT"),
+            1714662329
+        );
+    }
+
+    #[test]
+    fn test_parse_simple_user() {
+        let dom = Html::parse_document(
+            r#"
+            <div class="user">
+                <div class="user-icon">
+                    <img src="/themes/pastebin/img/user.png">
+                </div>
+                <div class="username">
+                    <a href="/u/user">user</a>
+                </div>
+                <div class="pro"></div>
+            </div>
+        "#,
+        );
+
+        let user = parse_simple_user(&dom.select(&Selector::parse(".user").unwrap()).next().unwrap());
+
+        assert_eq!(user.username, "user");
+        assert_eq!(user.registered, true);
+        assert_eq!(user.pro, true);
+        assert_eq!(user.icon_url, "/imgs/user.png");
+    }
+
+
+    #[test]
+    fn test_is_locked() {
+        let dom = Html::parse_document(
+            r#"
+            <form id="postpasswordverificationform">
+                <input id="postpasswordverificationform-password">
+            </form>
+        "#,
+        );
+
+        assert_eq!(is_locked(&dom), true);
+    }
+
+    #[test]
+    fn test_is_burn() {
+        let dom = Html::parse_document(
+            r#"
+            <div class="burn"></div>
+        "#,
+        );
+
+        assert_eq!(is_burn(&dom), true);
+    }
+}

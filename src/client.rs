@@ -57,3 +57,29 @@ impl Client {
         Html::parse_document(&self.post_string(url, form))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_client() {
+        let client = Client::new();
+        let response = client.get_response("https://pastebin.com").status();
+        assert_eq!(response, 200);
+    }
+
+    #[test]
+    fn test_get_string() {
+        let client = Client::new();
+        let response = client.get_string("https://pastebin.com");
+        assert!(response.contains("Pastebin.com"));
+    }
+
+    #[test]
+    fn test_get_bytes() {
+        let client = Client::new();
+        let response = client.get_bytes("https://pastebin.com");
+        assert!(response.len() > 0);
+    }
+}

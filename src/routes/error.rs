@@ -34,3 +34,13 @@ pub async fn error_404() -> impl IntoResponse {
     });
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_error_404() {
+        let response = error_404().await;
+        assert_eq!(response.into_response().status(), StatusCode::NOT_FOUND);
+    }
+}

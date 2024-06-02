@@ -47,3 +47,32 @@ async fn robots() -> impl IntoResponse {
         .body(Body::from(include_bytes!("assets/robots.txt").to_vec()))
         .unwrap()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_favicon_png() {
+        let response = favicon_png().await;
+        assert_eq!(response.into_response().status(), 200);
+    }
+
+    #[tokio::test]
+    async fn test_favicon_ico() {
+        let response = favicon_ico().await;
+        assert_eq!(response.into_response().status(), 200);
+    }
+
+    #[tokio::test]
+    async fn test_manifest() {
+        let response = manifest().await;
+        assert_eq!(response.into_response().status(), 200);
+    }
+
+    #[tokio::test]
+    async fn test_robots() {
+        let response = robots().await;
+        assert_eq!(response.into_response().status(), 200);
+    }
+}

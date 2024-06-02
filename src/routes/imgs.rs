@@ -46,3 +46,30 @@ async fn icon(
         .body(Body::from(icon))
         .unwrap()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_guest() {
+        let response = guest().await;
+        assert_eq!(response.into_response().status(), 200);
+    }
+
+    #[tokio::test]
+    async fn test_icon() {
+        let state = AppState::default();
+        let response = icon(
+            State(state.clone()),
+            Path((
+                "22".to_string(),
+                "20".to_string(),
+                "25".to_string(),
+                "10674139.jpg".to_string(),
+            )),
+        )
+        .await;
+        assert_eq!(response.into_response().status(), 200);
+    }
+}
