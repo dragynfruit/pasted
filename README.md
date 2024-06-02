@@ -24,6 +24,7 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [ ] Error Handling
 - [x] Password protected pastes
 - [x] Burn on read
+- [x] Icon cache
 - [ ] User page
 - [ ] Archive page
 - [ ] View deleted pastes

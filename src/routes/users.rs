@@ -1,7 +1,7 @@
 use axum::Router;
 
-use crate::client::Client;
+use crate::state::AppState;
 
-pub fn get_router(client: Client) -> Router {
-    Router::new().with_state(client)
+pub fn get_router(state: AppState) -> Router {
+    Router::new().with_state(state)
 }

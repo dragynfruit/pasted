@@ -1,11 +1,13 @@
-use crate::client::Client;
+
 use axum;
+use state::AppState;
 use std::env;
 use tokio::net::TcpListener;
 
 mod client;
 mod constants;
 mod paste;
+mod state;
 mod routes;
 mod templates;
 
@@ -15,9 +17,8 @@ async fn main() {
     let host = env::var("HOST").unwrap_or("0.0.0.0".to_string());
     let addr = format!("{}:{}", host, port);
 
-    let client = Client::new();
-
-    let app = routes::get_router(client);
+    let state = AppState::default();
+    let app = routes::get_router(state);
     let listener = TcpListener::bind(&addr).await.unwrap();
 
     println!("Listening at {}", addr);

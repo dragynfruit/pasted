@@ -9,10 +9,7 @@ use tera::Context;
 use ureq_multipart::MultipartBuilder;
 
 use crate::{
-    client::Client,
-    constants::URL,
-    templates::TEMPLATES,
-    paste::get_csrftoken,
+    constants::URL, paste::get_csrftoken, state::AppState, templates::TEMPLATES
 };
 
 #[derive(Deserialize)]
@@ -27,10 +24,10 @@ struct Post {
     title: String,
 }
 
-pub fn get_router(client: Client) -> Router {
+pub fn get_router(state: AppState) -> Router {
     Router::new()
         .route("/", routing::get(post).post(post_create))
-        .with_state(client)
+        .with_state(state)
 }
 
 async fn post() -> impl IntoResponse {
@@ -45,8 +42,8 @@ async fn post() -> impl IntoResponse {
         .unwrap()
 }
 
-async fn post_create(State(client): State<Client>, Form(data): Form<Post>) -> impl IntoResponse {
-    let csrf = get_csrftoken(&client.get_html(format!("{URL}/").as_str()));
+async fn post_create(State(state): State<AppState>, Form(data): Form<Post>) -> impl IntoResponse {
+    let csrf = get_csrftoken(&state.client.get_html(format!("{URL}/").as_str()));
 
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)
@@ -82,7 +79,7 @@ async fn post_create(State(client): State<Client>, Form(data): Form<Post>) -> im
         .finish()
         .unwrap();
 
-    let response = client.post_response(format!("{URL}/").as_str(), form);
+    let response = state.client.post_response(format!("{URL}/").as_str(), form);
     let paste_id = response
         .header("Location")
         .unwrap()

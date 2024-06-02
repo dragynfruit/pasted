@@ -1,8 +1,5 @@
 use crate::{
-    client::Client,
-    constants::URL,
-    paste::{self, Paste},
-    templates::TEMPLATES,
+    constants::URL, paste::{self, Paste}, state::AppState, templates::TEMPLATES
 };
 use axum::{
     body::Body,
@@ -30,7 +27,7 @@ struct Unlock {
     password: Option<String>,
 }
 
-pub fn get_router(client: Client) -> Router {
+pub fn get_router(state: AppState) -> Router {
     Router::new()
         .route("/raw/:id", routing::get(view_raw))
         .route("/json/:id", routing::get(view_json))
@@ -41,11 +38,11 @@ pub fn get_router(client: Client) -> Router {
         .route("/embed_js/:id", routing::get(view_embed_js))
         .route("/embed_iframe/:id", routing::get(view_embed_iframe))
         .route("/:id", routing::get(view).post(view_locked))
-        .with_state(client)
+        .with_state(state)
 }
 
-async fn view_raw(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
-    let content = client.get_string(format!("{URL}/raw/{id}").as_str());
+async fn view_raw(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let content = state.client.get_string(format!("{URL}/raw/{id}").as_str());
 
     Response::builder()
         .status(200)
@@ -54,15 +51,15 @@ async fn view_raw(State(client): State<Client>, Path(id): Path<String>) -> impl 
         .unwrap()
 }
 
-async fn view_json(State(client): State<Client>, Path(id): Path<String>) -> Json<Paste> {
-    let dom = client.get_html(format!("{URL}/{id}").as_str());
+async fn view_json(State(state): State<AppState>, Path(id): Path<String>) -> Json<Paste> {
+    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
     let paste = paste::parse_paste(&dom);
 
     Json(paste)
 }
 
-async fn view_download(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
-    let content = client.get_string(format!("{URL}/raw/{id}").as_str());
+async fn view_download(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let content = state.client.get_string(format!("{URL}/raw/{id}").as_str());
 
     Response::builder()
         .status(200)
@@ -75,8 +72,8 @@ async fn view_download(State(client): State<Client>, Path(id): Path<String>) -> 
         .unwrap()
 }
 
-async fn view_print(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
-    let dom = client.get_html(format!("{URL}/{id}").as_str());
+async fn view_print(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
     let paste = paste::parse_paste(&dom);
 
     Response::builder()
@@ -90,8 +87,8 @@ async fn view_print(State(client): State<Client>, Path(id): Path<String>) -> imp
         .unwrap()
 }
 
-async fn view_clone(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
-    let dom = client.get_html(format!("{URL}/{id}").as_str());
+async fn view_clone(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
     let paste = paste::parse_paste(&dom);
 
     Response::builder()
@@ -117,8 +114,8 @@ async fn view_embed(Path(id): Path<String>) -> impl IntoResponse {
         .unwrap()
 }
 
-async fn view_embed_js(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
-    let dom = client.get_html(format!("{URL}/{id}").as_str());
+async fn view_embed_js(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
     let paste = paste::parse_paste(&dom);
 
     Response::builder()
@@ -137,10 +134,10 @@ async fn view_embed_js(State(client): State<Client>, Path(id): Path<String>) -> 
 }
 
 async fn view_embed_iframe(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let dom = client.get_html(format!("{URL}/{id}").as_str());
+    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
     let paste = paste::parse_paste(&dom);
 
     Response::builder()
@@ -158,11 +155,11 @@ async fn view_embed_iframe(
 }
 
 async fn view_locked(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Form(data): Form<Unlock>,
 ) -> impl IntoResponse {
-    let csrf = paste::get_csrftoken(&client.get_html(format!("{URL}/{id}").as_str()));
+    let csrf = paste::get_csrftoken(&state.client.get_html(format!("{URL}/{id}").as_str()));
 
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)
@@ -174,7 +171,7 @@ async fn view_locked(
         .finish()
         .unwrap();
 
-    let dom = client.post_html(format!("{URL}/{id}").as_str(), form);
+    let dom = state.client.post_html(format!("{URL}/{id}").as_str(), form);
     let paste = paste::parse_paste(&dom);
 
     Response::builder()
@@ -188,8 +185,8 @@ async fn view_locked(
         .unwrap()
 }
 
-async fn view(State(client): State<Client>, Path(id): Path<String>) -> impl IntoResponse {
-    let dom = client.get_html(format!("{URL}/{id}").as_str());
+async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
     if paste::is_locked(&dom) {
         return Response::builder()
             .status(200)
