@@ -9,7 +9,7 @@ use tera::Context;
 use ureq_multipart::MultipartBuilder;
 
 use crate::{
-    constants::URL, paste::get_csrftoken, state::AppState, templates::TEMPLATES
+    constants::URL, state::AppState, templates::TEMPLATES, parsers::paste::get_csrftoken
 };
 
 #[derive(Deserialize)]

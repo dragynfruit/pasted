@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Archive{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+    /* center header */
+    h1 {
+        text-align: center;
+    }
+
+    h2 {
+        text-align: center;
+    }
+
+    table {
+        margin-left: auto;
+        margin-right: auto;
+        width: 90%;
+        border-collapse: collapse;
+    }
+</style>
+{% endblock head %}
+{% block content %}
+<h1>{% if syntax %}{{ syntax }} {% endif %}Archive</h1>
+{% if syntax %}
+<h2><a href="/archive">Main Archive</a></h2>
+{% endif %}
+<table>
+    <tbody>
+        <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Age</th>
+            <th scope="col">Syntax</th>
+        </tr>
+        {% for archive in archives %}
+            <tr>
+                <td><a href="/{{ archive.id }}">{{ archive.title }}</a></td>
+                <td>{{ archive.age }}</td>
+                <td><a href="/archive/{{ archive.syntax }}">{{ archive.syntax }}</a></td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock content %}

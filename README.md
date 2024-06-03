@@ -30,6 +30,6 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Burn on read
 - [x] Icon cache
 - [ ] User page
-- [ ] Archive page
+- [x] Archive page
 - [ ] View deleted pastes
-- [X] Last edited
+- [x] Last edited

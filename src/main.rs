@@ -6,7 +6,7 @@ use tokio::net::TcpListener;
 
 mod client;
 mod constants;
-mod paste;
+mod parsers;
 mod state;
 mod routes;
 mod templates;

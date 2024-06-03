@@ -25,10 +25,11 @@
     }
 
     #nav {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: center;
         background-color: var(--background-secondary-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem;
     }
 
     #nav>h1 {
@@ -39,6 +40,12 @@
     #nav>h1>a {
         text-decoration: none;
         color: var(--primary-color);
+    }
+
+    #nav>a {
+        text-decoration: underline;
+        color: var(--text-color);
+        margin-right: 1rem;
     }
 
     input {

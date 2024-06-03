@@ -1,5 +1,11 @@
 use crate::{
-    constants::URL, paste::{self, Paste}, state::AppState, templates::TEMPLATES
+    constants::URL,
+    parsers::{
+        paste::{self, Paste},
+        FromHtml as _,
+    },
+    state::AppState,
+    templates::TEMPLATES,
 };
 use axum::{
     body::Body,
@@ -53,7 +59,7 @@ async fn view_raw(State(state): State<AppState>, Path(id): Path<String>) -> impl
 
 async fn view_json(State(state): State<AppState>, Path(id): Path<String>) -> Json<Paste> {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-    let paste = paste::parse_paste(&dom);
+    let paste = Paste::from_html(&dom);
 
     Json(paste)
 }
@@ -74,7 +80,7 @@ async fn view_download(State(state): State<AppState>, Path(id): Path<String>) ->
 
 async fn view_print(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-    let paste = paste::parse_paste(&dom);
+    let paste = Paste::from_html(&dom);
 
     Response::builder()
         .status(200)
@@ -89,7 +95,7 @@ async fn view_print(State(state): State<AppState>, Path(id): Path<String>) -> im
 
 async fn view_clone(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-    let paste = paste::parse_paste(&dom);
+    let paste = Paste::from_html(&dom);
 
     Response::builder()
         .status(200)
@@ -116,7 +122,7 @@ async fn view_embed(Path(id): Path<String>) -> impl IntoResponse {
 
 async fn view_embed_js(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-    let paste = paste::parse_paste(&dom);
+    let paste = Paste::from_html(&dom);
 
     Response::builder()
         .status(200)
@@ -138,7 +144,7 @@ async fn view_embed_iframe(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-    let paste = paste::parse_paste(&dom);
+    let paste = Paste::from_html(&dom);
 
     Response::builder()
         .status(200)
@@ -164,7 +170,10 @@ async fn view_locked(
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)
         .unwrap()
-        .add_text("PostPasswordVerificationForm[password]", &data.password.unwrap_or("".to_owned()))
+        .add_text(
+            "PostPasswordVerificationForm[password]",
+            &data.password.unwrap_or("".to_owned()),
+        )
         .unwrap()
         .add_text("is_burn", "1")
         .unwrap()
@@ -172,7 +181,7 @@ async fn view_locked(
         .unwrap();
 
     let dom = state.client.post_html(format!("{URL}/{id}").as_str(), form);
-    let paste = paste::parse_paste(&dom);
+    let paste = Paste::from_html(&dom);
 
     Response::builder()
         .status(200)
@@ -201,16 +210,10 @@ async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl Int
             .unwrap()
     } else if paste::is_burn(&dom) {
         TEMPLATES
-            .render(
-                "burn.html",
-                &Context::from_serialize(Page {
-                    id
-                })
-                .unwrap(),
-            )
+            .render("burn.html", &Context::from_serialize(Page { id }).unwrap())
             .unwrap()
     } else {
-        let paste = paste::parse_paste(&dom);
+        let paste = Paste::from_html(&dom);
         TEMPLATES
             .render("view.html", &Context::from_serialize(paste).unwrap())
             .unwrap()
