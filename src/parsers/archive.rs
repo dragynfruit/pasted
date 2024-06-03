@@ -10,7 +10,7 @@ pub struct Archive {
     id: String,
     title: String,
     age: String,
-    syntax: String,
+    format: String,
 }
 
 impl FromElement for Archive {
@@ -42,7 +42,7 @@ impl FromElement for Archive {
             .trim()
             .to_owned();
 
-        let syntax = parent
+        let format = parent
             .select(&Selector::parse(&"td:nth-child(3)>a").unwrap())
             .next()
             .unwrap()
@@ -55,20 +55,20 @@ impl FromElement for Archive {
             id,
             title,
             age,
-            syntax,
+            format,
         }
     }
 }
 
 #[derive(Serialize)]
 pub struct ArchivePage {
-    syntax: Option<String>,
+    format: Option<String>,
     archives: Vec<Archive>,
 }
 
 impl FromHtml for ArchivePage {
     fn from_html(dom: &Html) -> Self {
-        let syntax = none_if_empty(
+        let format = none_if_empty(
             dom.select(&Selector::parse(&"meta[property='og:url']").unwrap())
                 .next()
                 .unwrap()
@@ -90,7 +90,7 @@ impl FromHtml for ArchivePage {
             .map(|(_, v)| Archive::from_element(&v))
             .collect::<Vec<Archive>>();
 
-        ArchivePage { syntax, archives }
+        ArchivePage { format, archives }
     }
 }
 

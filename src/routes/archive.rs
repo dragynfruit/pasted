@@ -13,23 +13,23 @@ use crate::{
 pub fn get_router(state: AppState) -> Router {
     Router::new()
         .route("/", routing::get(archive))
-        .route("/:syntax", routing::get(archive))
+        .route("/:format", routing::get(archive))
         .route("/json", routing::get(archive_json))
-        .route("/json/:syntax", routing::get(archive_json))
+        .route("/json/:format", routing::get(archive_json))
         .with_state(state)
 }
 
-fn get_url(syntax: Option<Path<String>>) -> String {
-    if syntax.is_some() {
-        let syntax = syntax.unwrap().0;
-        format!("{URL}/archive/{syntax}")
+fn get_url(format: Option<Path<String>>) -> String {
+    if format.is_some() {
+        let format = format.unwrap().0;
+        format!("{URL}/archive/{format}")
     } else {
         format!("{URL}/archive")
     }
 }
 
-async fn archive(State(state): State<AppState>, syntax: Option<Path<String>>) -> impl IntoResponse {
-    let dom = state.client.get_html(&get_url(syntax));
+async fn archive(State(state): State<AppState>, format: Option<Path<String>>) -> impl IntoResponse {
+    let dom = state.client.get_html(&get_url(format));
     let archive_page = ArchivePage::from_html(&dom);
 
     Response::builder()
@@ -46,8 +46,8 @@ async fn archive(State(state): State<AppState>, syntax: Option<Path<String>>) ->
         .unwrap()
 }
 
-async fn archive_json(State(state): State<AppState>, syntax: Option<Path<String>>) -> Json<ArchivePage> {
-    let dom = state.client.get_html(&get_url(syntax));
+async fn archive_json(State(state): State<AppState>, format: Option<Path<String>>) -> Json<ArchivePage> {
+    let dom = state.client.get_html(&get_url(format));
     let archive_page = ArchivePage::from_html(&dom);
 
     Json(archive_page)

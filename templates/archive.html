@@ -21,8 +21,8 @@
 </style>
 {% endblock head %}
 {% block content %}
-<h1>{% if syntax %}{{ syntax }} {% endif %}Archive</h1>
-{% if syntax %}
+<h1>{% if format %}{{ format }} {% endif %}Archive</h1>
+{% if format %}
 <h2><a href="/archive">Main Archive</a></h2>
 {% endif %}
 <table>
@@ -30,13 +30,13 @@
         <tr>
             <th scope="col">Title</th>
             <th scope="col">Age</th>
-            <th scope="col">Syntax</th>
+            <th scope="col">Format</th>
         </tr>
         {% for archive in archives %}
             <tr>
                 <td><a href="/{{ archive.id }}">{{ archive.title }}</a></td>
                 <td>{{ archive.age }}</td>
-                <td><a href="/archive/{{ archive.syntax }}">{{ archive.syntax }}</a></td>
+                <td><a href="/archive/{{ archive.format }}">{{ archive.format }}</a></td>
             </tr>
         {% endfor %}
     </tbody>
