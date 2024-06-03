@@ -3,6 +3,7 @@ FROM rust:alpine as builder
 WORKDIR /usr/src/pasted
 COPY . .
 
+RUN apk add --no-cache -U musl-dev openssl-dev
 RUN cargo build --release
 
 FROM alpine:latest
