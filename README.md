@@ -1,4 +1,3 @@
-![Logo](imgs/logo.png)
 # Pasted
 
 ## What is it?
