@@ -115,7 +115,7 @@
         </div>
         <div class="header-bottom">
             {% if author.registered %}
-            <a href="/{{ author.username }}">{{ author.username }}</a> |
+            <a href="/u/{{ author.username }}">{{ author.username }}</a> |
             {% if author.pro %}
             <span class="pro">PRO</span> |
             {% endif %}
@@ -153,7 +153,7 @@
                     </div>
                     <div class="header-top">
                         {% if comment.author.registered %}
-                        <a href="/{{ comment.author.username }}">{{ comment.author.username }}</a>
+                        <a href="/u/{{ comment.author.username }}">{{ comment.author.username }}</a>
                         {% if comment.author.pro %}
                         <span class="pro">PRO</span>
                         {% endif %}
