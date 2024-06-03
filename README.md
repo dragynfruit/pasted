@@ -10,7 +10,7 @@ Pasted is a free, privacy respecting frontend for pastebin written in Rust. It i
 
 ## Future
 
-Currently, the goal is to only do pastebin, but in the future I am looking to make a frontend to all th emajor pastebin alternatives aswell, all in one.
+Currently, the goal is to only do pastebin, but in the future I am looking to make a frontend to all the major pastebin alternatives aswell, all in one.
 
 ## Todo
 
