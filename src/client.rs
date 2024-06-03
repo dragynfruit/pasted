@@ -13,10 +13,6 @@ impl Client {
         }
     }
 
-    // pub fn get_agent(&self) -> &Agent {
-    //     &self.agent
-    // }
-
     pub fn get_response(&self, url: &str) -> ureq::Response {
         self.agent.get(url).call().unwrap()
     }

@@ -1,11 +1,11 @@
-FROM rust:1.77.2-bookworm as builder
+FROM rust:1.80.0-alpine as builder
 
 WORKDIR /usr/src/pasted
 COPY . .
 
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+FROM alpine:3.20.0
 
 COPY --from=builder /usr/src/pasted/target/release/pasted /usr/local/bin/pasted/pasted
 COPY --from=builder /usr/src/pasted/templates /usr/local/bin/pasted/templates
