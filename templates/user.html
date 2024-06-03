@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}User{% endblock title %}
+{% block head %}
+{{ super() }}
+<style>
+    #user {
+        margin: 0 auto;
+        max-width: 1200px;
+        padding: 20px;
+    }
+
+    .pro {
+        color: #d4d800;
+    }
+
+    .header {
+        display: grid;
+        grid-template-columns: 6em auto;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "header-left header-top"
+            "header-left header-bottom";
+        margin-bottom: 20px;
+    }
+
+    .header-left {
+        grid-area: header-left;
+    }
+
+    .header-top {
+        grid-area: header-top;
+        padding-left: 10px;
+    }
+
+    .header-bottom {
+        grid-area: header-bottom;
+        padding-left: 10px;
+    }
+
+    .header-left>img {
+        width: 100%;
+        height: auto;
+    }
+
+    table {
+        margin-left: auto;
+        margin-right: auto;
+        width: 90%;
+        border-collapse: collapse;
+    }
+</style>
+{% endblock head %}
+{% block content %}
+<div id="user">
+    <div class="header">
+        <div class="header-left">
+            <img src="{{icon_url}}" alt="{{username}} icon">
+        </div>
+        <div class="header-top">
+            <h2>{{ username }}</h2>
+        </div>
+        <div class="header-bottom">
+            {% if pro %}
+            <span class="pro">PRO</span> |
+            {% endif %}
+            {% if website %}
+            <a href="{{ website }}">Website</a> |
+            {% endif %}
+            {% if location %}
+            <span>{{ location }} 📍</span> |
+            {% endif %}
+            <span>{{ profile_views }} 👤👁️</span> |
+            <span>{{ paste_views }} 🗒️👁️</span> |
+            <span>{{ rating }} ⭐</span> |
+            <span>{{ date_joined | format_date_user }} 📅</span>
+        </div>
+    </div>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="col">Title</th>
+                <th scope="col">Age</th>
+                <th scope="col">Expires</th>
+                <th scope="col">Views</th>
+                <th scope="col">Comments</th>
+                <th scope="col">Format</th>
+            </tr>
+            {% for paste in pastes %}
+            <tr>
+                <td><a href="/{{ paste.id }}">{{ paste.title }}</a></td>
+                <td>{{ paste.age }}</td>
+                <td>{{ paste.expires }}</td>
+                <td>{{ paste.views }}</td>
+                <td>{{ paste.num_comments }}</td>
+                <td><a href="/archive/{{ paste.format }}">{{ paste.format }}</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

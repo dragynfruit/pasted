@@ -1,11 +1,10 @@
 use byte_unit::Byte;
-use chrono::DateTime;
 use scraper::{selectable::Selectable, ElementRef, Html, Selector};
 use serde::Serialize;
 
 use crate::constants::URL;
 
-use super::{user::SimpleUser, FromElement, FromHtml};
+use super::{parse_date, user::SimpleUser, FromElement, FromHtml};
 
 #[derive(Serialize)]
 pub struct PasteContainer {
@@ -323,17 +322,6 @@ pub fn get_csrftoken(dom: &Html) -> String {
         .attr("content")
         .unwrap()
         .to_owned()
-}
-
-pub fn parse_date(date: &str) -> i64 {
-    let start_index = date.find(" of").unwrap() - 2;
-    let end_index = start_index + 5;
-
-    let date = format!("{}{}", &date[..start_index], &date[end_index..]).replace("CDT", "-0500");
-
-    DateTime::parse_from_str(&date, "%A %e %B %Y %r %z")
-        .unwrap()
-        .timestamp()
 }
 
 pub fn is_locked(dom: &Html) -> bool {
