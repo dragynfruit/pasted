@@ -1,8 +1,13 @@
+![Logo](imgs/logo.png)
 # Pasted
 
 ## What is it?
 
 Pasted is a free, privacy respecting frontend for pastebin written in Rust. It is designed to use no javascript and be as simple as possible while also maintaining as many features as possible.
+
+## Screenshots
+![Home](imgs/home.png)
+![Paste](imgs/paste.png)
 
 ## Future
 
