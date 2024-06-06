@@ -29,8 +29,8 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Password protected pastes
 - [x] Burn on read
 - [x] Icon cache
-- [ ] User page
+- [x] User page
 - [x] Archive page
 - [ ] View deleted pastes
 - [x] Last edited
-- [ ] persitent cache volume
+- [ ] Persitent cache volume
