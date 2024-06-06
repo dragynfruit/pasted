@@ -131,6 +131,7 @@ impl FromHtml for User {
             .value()
             .attr("src")
             .unwrap()
+            .replace("/themes/pastebin/img/", "/imgs/")
             .replace("/cache/img/", "/imgs/");
 
         let website = parent
@@ -149,6 +150,7 @@ impl FromHtml for User {
             .unwrap()
             .text()
             .collect::<String>()
+            .replace(",", "")
             .parse()
             .unwrap();
 
@@ -158,6 +160,7 @@ impl FromHtml for User {
             .unwrap()
             .text()
             .collect::<String>()
+            .replace(",", "")
             .parse()
             .unwrap();
 
