@@ -14,6 +14,7 @@ pub struct PasteContainer {
     dislikes: Option<u32>,
     id: Option<String>,
     format: String,
+    format_name: String,
     content: String,
 }
 
@@ -73,7 +74,16 @@ impl FromElement for PasteContainer {
                     .to_owned()
             });
 
-        let format = parent
+        let format= parent
+            .select(&Selector::parse(&"a.h_800[href^='/archive/']").unwrap())
+            .next()
+            .unwrap()
+            .attr("href")
+            .unwrap()
+            .replace("/archive/", "")
+            .to_owned();
+
+        let format_name= parent
             .select(&Selector::parse(&"a.h_800[href^='/archive/']").unwrap())
             .next()
             .unwrap()
@@ -97,6 +107,7 @@ impl FromElement for PasteContainer {
             dislikes,
             id,
             format,
+            format_name,
             content,
         }
     }
