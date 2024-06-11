@@ -61,6 +61,7 @@ impl FromElement for UserPaste {
             .text()
             .collect::<String>()
             .trim()
+            .replace(",", "")
             .parse()
             .unwrap();
 
@@ -71,6 +72,7 @@ impl FromElement for UserPaste {
             .text()
             .collect::<String>()
             .trim()
+            .replace(",", "")
             .parse()
             .unwrap();
 
