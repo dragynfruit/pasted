@@ -5,7 +5,7 @@ use std::{collections::HashMap, process};
 use tera::{Error, Result, Tera, Value};
 
 pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
-    let mut tera = match Tera::new("templates/*") {
+    let mut tera = match Tera::new("templates/**/*") {
         Ok(t) => t,
         Err(e) => {
             println!("Parsing error(s): {}", e);
