@@ -33,4 +33,5 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [x] Archive page
 - [ ] View deleted pastes
 - [x] Last edited
-- [ ] Persitent cache volume
+- [ ] (Docker) Persitent cache volume
+- [ ] Allow users with accounts
