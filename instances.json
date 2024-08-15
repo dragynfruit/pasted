@@ -1,12 +1,3 @@
-{
-   "updated":"2024-05-04",
-   "instances":[
-      {
-         "url":"https://pasted.drakeerv.com",
-         "country":"US",
-         "version":"v1.0.0",
-         "description":"Official Instance",
-         "cloudflare":true
-      }
-   ]
-}
+[
+   "https://pasted.drakeerv.com"
+]
