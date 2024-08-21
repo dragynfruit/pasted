@@ -238,6 +238,7 @@ impl FromHtml for Paste {
             .text()
             .collect::<String>()
             .trim()
+            .replace(",", "")
             .parse()
             .unwrap();
 
