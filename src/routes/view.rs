@@ -197,7 +197,7 @@ async fn view_locked(
 async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
 
-    let renderd = if paste::is_locked(&dom) {
+    let rendered = if paste::is_locked(&dom) {
         TEMPLATES
             .render(
                 "locked.html",
@@ -222,6 +222,6 @@ async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl Int
     Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
-        .body(Body::from(renderd))
+        .body(Body::from(rendered))
         .unwrap()
 }
