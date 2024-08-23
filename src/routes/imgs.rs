@@ -34,7 +34,7 @@ async fn icon(
     let icon = if tree.contains_key(&path).unwrap() {
         tree.get(&path).unwrap().unwrap().to_vec()
     } else {
-        let icon = state.client.get_bytes(format!("{URL}/cache/img/{path}.jpg").as_str());
+        let icon = state.client.get_bytes(format!("{URL}/cache/img/{path}.jpg").as_str()).unwrap(); //fix
         tree.insert(&path, icon.clone()).unwrap();
         icon
     };
