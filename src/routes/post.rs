@@ -9,8 +9,10 @@ use tera::Context;
 use ureq_multipart::MultipartBuilder;
 
 use crate::{
-    constants::URL, state::AppState, templates::TEMPLATES, parsers::paste::get_csrftoken
+    constants::URL, parsers::paste, state::AppState, templates::TEMPLATES
 };
+
+use super::error;
 
 #[derive(Deserialize)]
 struct Post {
@@ -43,7 +45,13 @@ async fn post() -> impl IntoResponse {
 }
 
 async fn post_create(State(state): State<AppState>, Form(data): Form<Post>) -> impl IntoResponse {
-    let csrf = get_csrftoken(&state.client.get_html(format!("{URL}/").as_str()));
+    let csrf = state.client.get_html(format!("{URL}/").as_str());
+    
+    if csrf.is_err() {
+        return error::construct_error(csrf.err().unwrap());
+    }
+
+    let csrf = paste::get_csrftoken(&csrf.unwrap());
 
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)
@@ -79,7 +87,7 @@ async fn post_create(State(state): State<AppState>, Form(data): Form<Post>) -> i
         .finish()
         .unwrap();
 
-    let response = state.client.post_response(format!("{URL}/").as_str(), form);
+    let response = state.client.post_response(format!("{URL}/").as_str(), form).unwrap(); // Fix
     let paste_id = response
         .header("Location")
         .unwrap()

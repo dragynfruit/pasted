@@ -1,5 +1,8 @@
 use axum::{
-    body::Body, extract::{Path, State}, response::{IntoResponse, Response}, routing, Json, Router
+    body::Body,
+    extract::{Path, State},
+    response::{IntoResponse, Response},
+    routing, Json, Router,
 };
 use tera::Context;
 
@@ -9,6 +12,8 @@ use crate::{
     state::AppState,
     templates::TEMPLATES,
 };
+
+use super::error;
 
 pub fn get_router(state: AppState) -> Router {
     Router::new()
@@ -30,24 +35,29 @@ fn get_url(format: Option<Path<String>>) -> String {
 
 async fn archive(State(state): State<AppState>, format: Option<Path<String>>) -> impl IntoResponse {
     let dom = state.client.get_html(&get_url(format));
-    let archive_page = ArchivePage::from_html(&dom);
 
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        .body(Body::new(
-            TEMPLATES
-                .render(
-                    "archive.html",
-                    &Context::from_serialize(archive_page).unwrap(),
-                )
-                .unwrap(),
-        ))
-        .unwrap()
+    match dom {
+        Ok(dom) => Response::builder()
+            .status(200)
+            .header("Content-Type", "text/html")
+            .body(Body::new(
+                TEMPLATES
+                    .render(
+                        "archive.html",
+                        &Context::from_serialize(ArchivePage::from_html(&dom)).unwrap(),
+                    )
+                    .unwrap(),
+            ))
+            .unwrap(),
+        Err(err) => error::construct_error(err),
+    }
 }
 
-async fn archive_json(State(state): State<AppState>, format: Option<Path<String>>) -> Json<ArchivePage> {
-    let dom = state.client.get_html(&get_url(format));
+async fn archive_json(
+    State(state): State<AppState>,
+    format: Option<Path<String>>,
+) -> Json<ArchivePage> {
+    let dom = state.client.get_html(&get_url(format)).unwrap(); //fix
     let archive_page = ArchivePage::from_html(&dom);
 
     Json(archive_page)
