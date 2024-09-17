@@ -4,6 +4,7 @@ WORKDIR /usr/src/pasted
 COPY . .
 
 RUN apk add --no-cache -U musl-dev openssl-dev
+ENV OPENSSL_DIR=/usr
 RUN cargo build --release
 
 FROM alpine:latest
