@@ -70,7 +70,7 @@ jobs:
       # Read cargo.toml for version and add it to tags
       - name: Get version from Cargo.toml
         id: version
-        run: echo ::set-output name=version::$(cargo metadata --format-version 1 | jq -r '.packages[0].version')
+        run: echo ::set-output name=version::$(cargo pkgid | cut -d "#" -f2)
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
