@@ -67,6 +67,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      # Read cargo.toml for version and add it to tags
+      - name: Get version from Cargo.toml
+        id: version
+        run: echo ::set-output name=version::$(cargo metadata --format-version 1 | jq -r '.packages[0].version')
+
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
@@ -75,7 +80,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: latest,${{ steps.meta.outputs.tags }},${{ steps.version.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
