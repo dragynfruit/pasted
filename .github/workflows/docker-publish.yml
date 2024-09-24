@@ -59,14 +59,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
       # Read cargo.toml for version and add it to tags
       - name: Get version from Cargo.toml
         id: version
@@ -80,7 +72,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: latest,${{ steps.meta.outputs.tags }},${{ steps.version.outputs.version }}
+          tags: ${{ env.REGISTRY }}/{{$ env.IMAGE_NAME}}:${{ steps.version.outputs.version }},${{ env.REGISTRY }}/{{$ env.IMAGE_NAME}}:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
