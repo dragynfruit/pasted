@@ -34,5 +34,6 @@ Currently, the goal is to only do pastebin, but in the future I am looking to ma
 - [ ] Markdown paste support
 - [ ] View deleted pastes
 - [x] Last edited
-- [ ] (Docker) Persitent cache volume
+- [x] (Docker) Persitent cache volume
 - [ ] Allow users with accounts
+
