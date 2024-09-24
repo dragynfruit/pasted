@@ -1,9 +1,13 @@
 [package]
 name = "pasted"
-version = "1.2.16"
+version = "1.2.17"
 edition = "2021"
 authors = ["drakeerv <drakeerv@outlook.com>"]
 description = "A pastebin frontend written in Rust"
+build = "build.rs"
+
+[build-dependencies]
+chrono = { version = "0.4.38", default-features = false, features = ["clock", "std"] }
 
 [dependencies]
 axum = { version = "0.7.6", default-features = false, features = ["tokio", "http1", "json", "matched-path", "form"] }

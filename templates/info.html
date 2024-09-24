@@ -39,5 +39,17 @@
         <td>DB Size</td>
         <td>{{ db_size | format_bytes }}</td>
     </tr>
+    <tr>
+        <td>Commit</td>
+        <td>{{ commit }}</td>
+    </tr>
+    <tr>
+        <td>Build Date</td>
+        <td>{{ build_date }}</td>
+    </tr>
+    <tr>
+        <td>Deploy Date</td>
+        <td>{{ deploy_date }}</td>
+    </tr>
 </table>
 {% endblock content %}

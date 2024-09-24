@@ -17,6 +17,8 @@ async fn main() {
     let host = env::var("HOST").unwrap_or("0.0.0.0".to_string());
     let addr = format!("{}:{}", host, port);
 
+    routes::info::DEPLOY_DATE.get_or_init(|| chrono::Local::now().to_rfc2822());
+
     let state = AppState::default();
     let app = routes::get_router(state);
     let listener = TcpListener::bind(&addr).await.unwrap();
