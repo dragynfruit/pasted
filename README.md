@@ -8,6 +8,12 @@ Pasted is a free, privacy respecting frontend for pastebin written in Rust. It i
 ![Home](imgs/home.png)
 ![Paste](imgs/paste.png)
 
+# Self Host
+
+We made a docker image! It is availible at [ghcr.io/dragynfruit/pasted:latest](https://github.com/dragynfruit/pasted/pkgs/container/pasted)
+By default this uses port 3000 with host 0.0.0.0. To change this you can set the environment variables PORT and HOST accordingly.
+A premade docker-compose is availible [here.](docker-compose.yml)
+
 ## Future
 
 Currently, the goal is to only do pastebin, but in the future I am looking to make a frontend to all the major pastebin alternatives aswell, all in one.
