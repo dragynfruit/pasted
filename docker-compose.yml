@@ -1,8 +1,10 @@
+# Example docker compose for pasted
+
 services:
   pasted:
-    image: pasted:latest
-    restart: always
+    image: ghcr.io/dragynfruit/pasted:latest
     container_name: "pasted"
-    read_only: true
     ports:
       - "3000:3000"
+    volumes:
+      - "/data/pasted/cache:/usr/local/bin/pasted/cache"
