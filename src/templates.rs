@@ -7,8 +7,6 @@ use tera::{Error, Result, Tera, Value};
 #[cfg(feature = "include_templates")]
 use include_dir::include_dir;
 
-#[cfg(not(feature = "include_templates"))]
-
 pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
     #[cfg(feature = "include_templates")]
     let mut tera = {
