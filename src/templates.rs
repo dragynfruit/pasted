@@ -30,8 +30,6 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
                 process::exit(1);
             }
         }
-
-        tera
     };
 
     #[cfg(not(feature = "include_templates"))]
