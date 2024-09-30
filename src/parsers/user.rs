@@ -82,8 +82,7 @@ impl FromElement for UserPaste {
             .unwrap()
             .attr("href")
             .unwrap()
-            .replace("/archive/", "")
-            .to_owned();
+            .replace("/archive/", "");
 
         UserPaste {
             id,
