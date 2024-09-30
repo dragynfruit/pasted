@@ -19,8 +19,10 @@ struct InstanceInfo {
     is_release: bool,
     db_size: u64,
     commit: &'static str,
+    used_actions: bool,
     build_date: &'static str,
     deploy_date: &'static str,
+    static_templates: bool,
 }
 
 fn get_info(state: AppState) -> InstanceInfo {
@@ -40,9 +42,11 @@ fn get_info(state: AppState) -> InstanceInfo {
         name: env!("CARGO_PKG_NAME"),
         is_release: !cfg!(debug_assertions),
         db_size: state.db.size_on_disk().unwrap(),
+        used_actions: std::env::var("USED_ACTIONS").unwrap_or_default() == "true",
         commit,
         build_date,
         deploy_date,
+        static_templates: cfg!(feature = "include_templates"),
     }
 }
 
