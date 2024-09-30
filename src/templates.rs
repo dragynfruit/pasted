@@ -4,7 +4,39 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, process};
 use tera::{Error, Result, Tera, Value};
 
+#[cfg(feature = "include_templates")]
+use include_dir::include_dir;
+
+#[cfg(not(feature = "include_templates"))]
+
 pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
+    #[cfg(feature = "include_templates")]
+    let mut tera = {
+        let dir = include_dir!("templates");
+        let mut tera = Tera::default();
+
+        let templates = dir
+            .files()
+            .iter()
+            .map(|file| {
+                let name = file.path().to_str().unwrap();
+                let content = std::str::from_utf8(file.contents()).unwrap();
+                (name, content)
+            })
+            .collect::<Vec<_>>();
+
+        match tera.add_raw_templates(templates) {
+            Ok(_) => tera,
+            Err(e) => {
+                println!("Parsing error(s): {}", e);
+                process::exit(1);
+            }
+        }
+
+        tera
+    };
+
+    #[cfg(not(feature = "include_templates"))]
     let mut tera = match Tera::new("templates/**/*") {
         Ok(t) => t,
         Err(e) => {
@@ -12,6 +44,7 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
             process::exit(1);
         }
     };
+
     tera.register_filter("format_date", format_date);
     tera.register_filter("format_date_user", format_date_user);
     tera.register_filter("format_bytes", format_bytes);
