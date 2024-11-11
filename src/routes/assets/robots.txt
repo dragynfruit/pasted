@@ -1,1 +1,8 @@
 User-agent: *
+Disallow: /embed
+Disallow: /print
+Disallow: /raw
+Disallow: /embed
+Disallow: /embed_iframe
+Disallow: /clone
+Disallow: /info
