@@ -15,7 +15,6 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
 
         let templates = dir
             .files()
-            .iter()
             .map(|file| {
                 let name = file.path().to_str().unwrap();
                 let content = std::str::from_utf8(file.contents()).unwrap();
