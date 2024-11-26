@@ -28,7 +28,7 @@
 <body>
     {% if get_banner() != "" %}
     <div id="banner">
-        {{ get_banner() }}
+        {{ get_banner() | safe }}
     </div>
     {% endif %}
     <div id="nav">

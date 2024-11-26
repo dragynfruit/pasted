@@ -4,6 +4,8 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, env, process};
 use tera::{Error, Result, Tera, Value};
 
+pub static BANNER: Lazy<String> = Lazy::new(|| env::var("BANNER").unwrap_or_default());
+
 #[cfg(feature = "include_templates")]
 use include_dir::include_dir;
 
@@ -88,7 +90,7 @@ fn format_bytes(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
 }
 
 fn get_banner(_: &HashMap<String, Value>) -> Result<Value> {
-    Ok(tera::to_value(env::var("BANNER").unwrap_or_default()).unwrap())
+    Ok(tera::to_value(BANNER.clone()).unwrap())
 }
 
 #[cfg(test)]

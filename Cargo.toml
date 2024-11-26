@@ -1,6 +1,6 @@
 [package]
 name = "pasted"
-version = "1.2.26"
+version = "1.2.27"
 edition = "2021"
 authors = ["drakeerv <drakeerv@outlook.com>"]
 description = "A pastebin frontend written in Rust"
