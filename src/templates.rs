@@ -1,7 +1,7 @@
 use byte_unit::{Byte, UnitType};
 use chrono::DateTime;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, process};
+use std::{collections::HashMap, env, process};
 use tera::{Error, Result, Tera, Value};
 
 #[cfg(feature = "include_templates")]
@@ -44,6 +44,7 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
     tera.register_filter("format_date", format_date);
     tera.register_filter("format_date_user", format_date_user);
     tera.register_filter("format_bytes", format_bytes);
+    tera.register_function("get_banner", get_banner);
     tera
 });
 
@@ -85,6 +86,10 @@ fn format_bytes(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
             "Filter `format_bytes` was used on a value that isn't a valid number.",
         ))
     }
+}
+
+fn get_banner(_: &HashMap<String, Value>) -> Result<Value> {
+    Ok(tera::to_value(env::var("BANNER").unwrap_or_default()).unwrap())
 }
 
 #[cfg(test)]

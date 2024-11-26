@@ -26,6 +26,11 @@
 </head>
 
 <body>
+    {% if get_banner() != "" %}
+    <div id="banner">
+        {{ get_banner() }}
+    </div>
+    {% endif %}
     <div id="nav">
         <h1><a href="/">Pasted</a></h1>
         <a href="/archive">Archive</a>
