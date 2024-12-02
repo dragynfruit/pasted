@@ -19,7 +19,7 @@ async fn guest() -> Result<Response<Body>, Response<Body>> {
         .header("Content-Type", "image/png")
         .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(include_bytes!("assets/guest.png").to_vec()))
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to serve guest image".to_string(),
             ErrorSource::Internal
@@ -57,7 +57,7 @@ async fn icon(
         .header("Content-Type", "image/jpeg")
         .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(icon))
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to serve icon image".to_string(),
             ErrorSource::Internal
