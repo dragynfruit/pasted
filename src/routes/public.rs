@@ -1,7 +1,7 @@
 use axum::{
     body::Body,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
     routing, Router,
 };
 
@@ -21,7 +21,7 @@ async fn favicon_png() -> Result<Response<Body>, Response<Body>> {
         .header("Content-Type", "image/png")
         .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(include_bytes!("assets/favicon.png").to_vec()))
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to serve favicon.png".to_string(),
             ErrorSource::Internal
@@ -34,7 +34,7 @@ async fn favicon_ico() -> Result<Response<Body>, Response<Body>> {
         .header("Content-Type", "image/x-icon")
         .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(include_bytes!("assets/favicon.ico").to_vec()))
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to serve favicon.ico".to_string(),
             ErrorSource::Internal
@@ -47,7 +47,7 @@ async fn manifest() -> Result<Response<Body>, Response<Body>> {
         .header("Content-Type", "application/json")
         .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(include_bytes!("assets/manifest.json").to_vec()))
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to serve manifest.json".to_string(),
             ErrorSource::Internal
@@ -60,7 +60,7 @@ async fn robots() -> Result<Response<Body>, Response<Body>> {
         .header("Content-Type", "text/plain")
         .header("Cache-Control", "public, max-age=31536000, immutable")
         .body(Body::from(include_bytes!("assets/robots.txt").to_vec()))
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to serve robots.txt".to_string(),
             ErrorSource::Internal
@@ -69,6 +69,8 @@ async fn robots() -> Result<Response<Body>, Response<Body>> {
 
 #[cfg(test)]
 mod tests {
+    use axum::response::IntoResponse as _;
+
     use super::*;
 
     #[tokio::test]

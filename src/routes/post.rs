@@ -81,7 +81,7 @@ async fn post_create(
         .add_text("PostForm[is_guest]", "1")
         .unwrap()
         .finish()
-        .map_err(|e| render_error(Error::new(
+        .map_err(|_e| render_error(Error::new(
             StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             "Failed to create form".to_string(),
             ErrorSource::Internal
