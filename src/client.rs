@@ -1,6 +1,7 @@
 use scraper::Html;
 use ureq::{Agent, AgentBuilder};
 use std::fmt;
+use std::io::Read;
 
 #[derive(Clone)]
 pub struct Client {
@@ -62,22 +63,23 @@ impl Client {
 
     pub fn get_bytes(&self, url: &str) -> Result<Vec<u8>, ClientError> {
         let mut data = Vec::new();
-        self.agent
+        let mut reader = self.agent
             .get(url)
-            .call()
-            .unwrap()
-            .into_reader()
-            .read_to_end(&mut data)
-            .unwrap();
+            .call()?
+            .into_reader();
+        
+        reader.read_to_end(&mut data)?;
         Ok(data)
     }
 
     pub fn get_html(&self, url: &str) -> Result<Html, ClientError> {
-        Ok(Html::parse_document(&&self.get_string(url)?))
+        self.get_string(url)
+            .map(|s| Html::parse_document(&s))
     }
 
     pub fn post_html(&self, url: &str, form: (String, Vec<u8>)) -> Result<Html, ClientError> {
-        Ok(Html::parse_document(&self.post_string(url, form)?))
+        self.post_string(url, form)
+            .map(|s| Html::parse_document(&s))
     }
 }
 

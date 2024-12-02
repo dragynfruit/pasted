@@ -1,5 +1,5 @@
 use axum::{
-    body::Body, extract::{Path, State}, http::StatusCode, response::{IntoResponse, Response}, routing, Router
+    body::Body, extract::{Path, State}, http::StatusCode, response::Response, routing, Router
 };
 
 use crate::{state::AppState, constants::URL};
@@ -66,6 +66,8 @@ async fn icon(
 
 #[cfg(test)]
 mod tests {
+    use axum::response::IntoResponse as _;
+
     use super::*;
 
     #[tokio::test]
