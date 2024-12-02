@@ -1,5 +1,6 @@
 use scraper::Html;
 use ureq::{Agent, AgentBuilder};
+use std::fmt;
 
 #[derive(Clone)]
 pub struct Client {
@@ -21,6 +22,15 @@ impl From<ureq::Error> for ClientError {
 impl From<std::io::Error> for ClientError {
     fn from(value: std::io::Error) -> Self {
         ClientError::IoError(value)
+    }
+}
+
+impl fmt::Display for ClientError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ClientError::UreqError(err) => write!(f, "HTTP request error: {}", err),
+            ClientError::IoError(err) => write!(f, "IO error: {}", err),
+        }
     }
 }
 

@@ -1,24 +1,66 @@
 {% extends "base.html" %}
 {% block title %}{{ status }} Error{% endblock title %}
+
 {% block head %}
 {{ super() }}
 <style>
+    .error-container {
+        padding: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .error-details {
+        background: #f8f8f8;
+        padding: 1rem;
+        border-radius: 4px;
+        margin: 1rem 0;
+    }
+    .stack-trace {
+        font-family: monospace;
+        white-space: pre-wrap;
+        background: #f1f1f1;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .error-upstream {
+        border-left: 4px solid #ff9800;
+    }
+    .error-internal {
+        border-left: 4px solid #f44336;
+    }
+    .error-source {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 1rem;
+    }
 </style>
 {% endblock head %}
+
 {% block content %}
-<h1>{{ status }}</h1>
-{% if message %}
-<h2>{{ message }}</h2>
-{% else %}
-{% if status == 404 %}
-<h2>Page not found</h2>
-{% elif status == 403 %}
-<h2>Forbidden</h2>
-{% elif status == 500 %}
-<h2>Internal Server Error</h2>
-{% else %}
-<h2>Unknown error</h2>
-{% endif %}
-{% endif %}
-<h3><a href="/">Home</a></h3>
+<div class="error-container {% if source == "Upstream" %}error-upstream{% else %}error-internal{% endif %}">
+    <h1>{{ status }}</h1>
+    <h2>{{ message }}</h2>
+    <div class="error-source">
+        {% if source == "Upstream" %}
+            Error occurred in upstream service
+        {% else %}
+            Error occurred in this application
+        {% endif %}
+    </div>
+
+    {% if details %}
+        <div class="error-details">
+            <h3>Additional Details:</h3>
+            <p>{{ details }}</p>
+        </div>
+    {% endif %}
+
+    {% if stack_trace %}
+        <div class="stack-trace">
+            {{ stack_trace }}
+        </div>
+    {% endif %}
+
+    <h3><a href="/">Return Home</a></h3>
+</div>
 {% endblock content %}

@@ -1,6 +1,7 @@
 use axum::{
     body::Body,
     extract::State,
+    http::StatusCode,
     response::{IntoResponse, Response},
     routing, Json, Router,
 };
@@ -9,6 +10,7 @@ use std::sync::OnceLock;
 use tera::Context;
 
 use crate::{state::AppState, templates::TEMPLATES};
+use super::error::{Error, ErrorSource, render_error};
 
 pub static DEPLOY_DATE: OnceLock<String> = OnceLock::new();
 
@@ -29,6 +31,11 @@ fn get_info(state: AppState) -> InstanceInfo {
     let commit = include_str!("../../.git/FETCH_HEAD")
         .lines()
         .next()
+        .ok_or_else(|| Error::new(
+            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            "Failed to read commit info".to_string(),
+            ErrorSource::Internal
+        ))
         .unwrap()
         .split('\t')
         .next()
@@ -57,21 +64,21 @@ pub fn get_router(state: AppState) -> Router {
         .with_state(state)
 }
 
-async fn info(State(state): State<AppState>) -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        .body(Body::new(
-            TEMPLATES
-                .render(
-                    "info.html",
-                    &Context::from_serialize(&get_info(state)).unwrap(),
-                )
-                .unwrap(),
-        ))
-        .unwrap()
+async fn info(State(state): State<AppState>) -> Result<Response<Body>, Response<Body>> {
+    let info = get_info(state);
+    TEMPLATES
+        .render("info.html", &Context::from_serialize(&info).unwrap())
+        .map(|html| {
+            Response::builder()
+                .status(200)
+                .header("Content-Type", "text/html")
+                .body(Body::new(html))
+                .unwrap()
+        })
+        .map_err(|e| render_error(Error::from(e)))
 }
 
-async fn info_json(State(state): State<AppState>) -> Json<InstanceInfo> {
-    Json(get_info(state))
+async fn info_json(State(state): State<AppState>) -> Result<Json<InstanceInfo>, Response<Body>> {
+    let info = get_info(state);
+    Ok(Json(info))
 }

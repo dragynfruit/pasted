@@ -1,8 +1,5 @@
 use axum::{
-    body::Body,
-    extract::State,
-    response::{IntoResponse, Response},
-    routing, Form, Router,
+    body::Body, extract::State, http::StatusCode, response::Response, routing, Form, Router
 };
 use serde::Deserialize;
 use tera::Context;
@@ -12,7 +9,7 @@ use crate::{
     constants::URL, parsers::paste, state::AppState, templates::TEMPLATES
 };
 
-use super::error;
+use super::error::{self, render_error, Error, ErrorSource};
 
 #[derive(Deserialize)]
 struct Post {
@@ -32,27 +29,26 @@ pub fn get_router(state: AppState) -> Router {
         .with_state(state)
 }
 
-async fn post() -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        
-        .header("Cache-Control", "public, max-age=31536000, immutable")
-        .body(Body::new(
-            TEMPLATES.render("post.html", &Context::new()).unwrap(),
-        ))
-        .unwrap()
+async fn post() -> Result<Response<Body>, Response<Body>> {
+    TEMPLATES.render("post.html", &Context::new())
+        .map(|html| Response::builder()
+            .status(200)
+            .header("Content-Type", "text/html")
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .body(Body::new(html))
+            .unwrap())
+        .map_err(|e| render_error(Error::from(e)))
 }
 
-async fn post_create(State(state): State<AppState>, Form(data): Form<Post>) -> impl IntoResponse {
-    let csrf = state.client.get_html(format!("{URL}/").as_str());
+async fn post_create(
+    State(state): State<AppState>, 
+    Form(data): Form<Post>
+) -> Result<Response<Body>, Response<Body>> {
+    let csrf = state.client.get_html(format!("{URL}/").as_str())
+        .map_err(|e| error::construct_error(e))?;
+
+    let csrf = paste::get_csrftoken(&csrf);
     
-    if csrf.is_err() {
-        return error::construct_error(csrf.err().unwrap());
-    }
-
-    let csrf = paste::get_csrftoken(&csrf.unwrap());
-
     let form = MultipartBuilder::new()
         .add_text("_csrf-frontend", &csrf)
         .unwrap()
@@ -85,20 +81,33 @@ async fn post_create(State(state): State<AppState>, Form(data): Form<Post>) -> i
         .add_text("PostForm[is_guest]", "1")
         .unwrap()
         .finish()
-        .unwrap();
+        .map_err(|e| render_error(Error::new(
+            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            "Failed to create form".to_string(),
+            ErrorSource::Internal
+        )))?;
 
-    let response = state.client.post_response(format!("{URL}/").as_str(), form).unwrap(); // Fix
-    let paste_id = response
-        .header("Location")
-        .unwrap()
+    let response = state.client.post_response(format!("{URL}/").as_str(), form)
+        .map_err(|e| error::construct_error(e))?;
+
+    let paste_id = response.header("Location")
+        .ok_or_else(|| render_error(Error::new(
+            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            "Missing Location header".to_string(),
+            ErrorSource::Internal
+        )))?
         .split("/")
         .last()
-        .unwrap();
+        .ok_or_else(|| render_error(Error::new(
+            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            "Invalid Location header".to_string(),
+            ErrorSource::Internal
+        )))?;
 
-    Response::builder()
+    Ok(Response::builder()
         .status(response.status())
         .header("Location", format!("/{paste_id}"))
         .header("Content-Type", "text/html")
         .body(Body::empty())
-        .unwrap()
+        .unwrap())
 }

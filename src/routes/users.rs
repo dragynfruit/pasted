@@ -13,7 +13,7 @@ use crate::{
     templates::TEMPLATES,
 };
 
-use super::error;
+use super::error::{self, render_error, Error};
 
 pub fn get_router(state: AppState) -> Router {
     Router::new()
@@ -24,27 +24,29 @@ pub fn get_router(state: AppState) -> Router {
 
 async fn user(State(state): State<AppState>, Path(username): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(&format!("{URL}/u/{username}"));
-
     match dom {
-        Ok(dom) => Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::new(
-                TEMPLATES
-                    .render(
-                        "user.html",
-                        &Context::from_serialize(User::from_html(&dom)).unwrap(),
-                    )
+        Ok(dom) => {
+            let user = User::from_html(&dom);
+            match TEMPLATES.render("user.html", &Context::from_serialize(&user).unwrap() ) {
+                Ok(html) => Response::builder()
+                    .status(200)
+                    .header("Content-Type", "text/html")
+                    .body(Body::new(html))
                     .unwrap(),
-            ))
-            .unwrap(),
+                Err(err) => render_error(Error::from(err)),
+            }
+        }
         Err(err) => error::construct_error(err),
     }
 }
 
-async fn json_user(State(state): State<AppState>, Path(username): Path<String>) -> Json<User> {
-    let dom = state.client.get_html(&format!("{URL}/u/{username}")).unwrap(); // fix
+async fn json_user(
+    State(state): State<AppState>, 
+    Path(username): Path<String>
+) -> Result<Json<User>, Response<Body>> {
+    let dom = state.client.get_html(&format!("{URL}/u/{username}"))
+        .map_err(|e| error::construct_error(e))?;
+    
     let user = User::from_html(&dom);
-
-    Json(user)
+    Ok(Json(user))
 }
