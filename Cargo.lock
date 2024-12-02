@@ -1032,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "pasted"
-version = "1.2.27"
+version = "1.2.28"
 dependencies = [
  "axum",
  "byte-unit",
