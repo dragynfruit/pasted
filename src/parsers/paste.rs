@@ -21,84 +21,61 @@ pub struct PasteContainer {
 impl FromElement for PasteContainer {
     fn from_element(parent: &ElementRef) -> Self {
         let category = parent
-            .select(&Selector::parse(&"span[title=Category]").unwrap())
+            .select(&Selector::parse("span[title=Category]").unwrap())
             .next()
-            .map(|x| {
-                x.text()
-                    .collect::<String>()
-                    .trim()
-                    .split_once(" ")
-                    .unwrap()
-                    .1
-                    .to_owned()
+            .and_then(|x| {
+                let text = x.text().collect::<String>();
+                text.trim().split_once(" ").map(|(_, cat)| cat.to_owned())
             });
 
-        let size = Byte::parse_str(
-            parent
-                .select(&Selector::parse(".left").unwrap())
-                .next()
-                .unwrap()
-                .text()
-                .collect::<String>()
-                .trim()
-                .split_once(" ")
-                .unwrap()
-                .1
-                .split_once("\n")
-                .unwrap()
-                .0
-                .to_owned(),
-            true,
-        )
-        .unwrap_or(Byte::default())
-        .as_u64();
+        let size = parent
+            .select(&Selector::parse(".left").unwrap())
+            .next()
+            .and_then(|el| {
+                let text = el.text().collect::<String>();
+                text.trim()
+                    .split_once(" ")
+                    .and_then(|(_, size)| size.split_once("\n"))
+                    .map(|(size, _)| size.to_owned())
+            })
+            .and_then(|size| Byte::parse_str(&size, true).ok())
+            .unwrap_or(Byte::default())
+            .as_u64();
 
         let likes = parent
-            .select(&Selector::parse(&".-like").unwrap())
+            .select(&Selector::parse(".-like").unwrap())
             .next()
-            .map(|x| x.text().collect::<String>().trim().parse().unwrap());
+            .and_then(|x| x.text().collect::<String>().trim().parse().ok());
 
         let dislikes = parent
-            .select(&Selector::parse(&".-dislike").unwrap())
+            .select(&Selector::parse(".-dislike").unwrap())
             .next()
-            .map(|x| x.text().collect::<String>().trim().parse().unwrap());
+            .and_then(|x| x.text().collect::<String>().trim().parse().ok());
 
         let id = parent
-            .select(&Selector::parse(&"a[href^='/report/']").unwrap())
+            .select(&Selector::parse("a[href^='/report/']").unwrap())
             .next()
-            .map(|x| {
-                x.value()
-                    .attr("href")
-                    .unwrap()
-                    .replace("/report/", "")
-                    .to_owned()
-            });
+            .and_then(|x| x.value().attr("href"))
+            .map(|href| href.replace("/report/", ""));
 
-        let format= parent
-            .select(&Selector::parse(&"a.h_800[href^='/archive/']").unwrap())
-            .next()
-            .unwrap()
-            .attr("href")
-            .unwrap()
-            .replace("/archive/", "")
-            .to_owned();
+        let format_el = parent
+            .select(&Selector::parse("a.h_800[href^='/archive/']").unwrap())
+            .next();
 
-        let format_name= parent
-            .select(&Selector::parse(&"a.h_800[href^='/archive/']").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+        let format = format_el
+            .and_then(|el| el.attr("href"))
+            .map(|href| href.replace("/archive/", ""))
+            .unwrap_or_else(|| "text".to_string());
+
+        let format_name = format_el
+            .map(|el| el.text().collect::<String>().trim().to_owned())
+            .unwrap_or_else(|| "Plain Text".to_string());
 
         let content = parent
-            .select(&Selector::parse(&".source>ol").unwrap())
+            .select(&Selector::parse(".source>ol").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .to_owned();
+            .map(|el| el.text().collect::<String>())
+            .unwrap_or_default();
 
         PasteContainer {
             category,
