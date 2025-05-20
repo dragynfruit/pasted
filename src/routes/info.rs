@@ -28,18 +28,20 @@ struct InstanceInfo {
 }
 
 fn get_info(state: AppState) -> InstanceInfo {
-    let commit = include_str!("../../.git/FETCH_HEAD")
-        .lines()
-        .next()
-        .ok_or_else(|| Error::new(
-            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-            "Failed to read commit info".to_string(),
-            ErrorSource::Internal
-        ))
-        .unwrap()
-        .split('\t')
-        .next()
-        .unwrap();
+    // let commit = include_str!("../../.git/FETCH_HEAD")
+    //     .lines()
+    //     .next()
+    //     .ok_or_else(|| Error::new(
+    //         StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+    //         "Failed to read commit info".to_string(),
+    //         ErrorSource::Internal
+    //     ))
+    //     .unwrap()
+    //     .split('\t')
+    //     .next()
+    //     .unwrap();
+    // use none
+    let commit = "Currently Broken";
 
     let build_date = env!("BUILD_DATE");
     let deploy_date = DEPLOY_DATE.get().unwrap();
