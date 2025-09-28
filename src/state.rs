@@ -24,4 +24,15 @@ impl AppState {
 
         Self::new(client, db)
     }
+
+    pub fn try_default() -> Result<Self, sled::Error> {
+        let client = Client::new();
+        let db = Config::default()
+            .path("cache")
+            .flush_every_ms(Some(1000))
+            .mode(Mode::HighThroughput)
+            .open()?;
+
+        Ok(Self::new(client, db))
+    }
 }

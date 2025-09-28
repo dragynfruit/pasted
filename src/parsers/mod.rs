@@ -13,13 +13,22 @@ pub trait FromElement {
     fn from_element(parent: &ElementRef) -> Self;
 }
 
-pub fn parse_date(date: &str) -> i64 {
-    let start_index = date.find(" of").unwrap() - 2;
+pub fn parse_date(date: &str) -> Result<i64, Box<dyn std::error::Error>> {
+    let start_index = date.find(" of")
+        .ok_or("Date string missing ' of' marker")?
+        .checked_sub(2)
+        .ok_or("Invalid date format")?;
     let end_index = start_index + 5;
 
-    let date = format!("{}{}", &date[..start_index], &date[end_index..]).replace("CDT", "-0500");
+    if end_index > date.len() {
+        return Err("Date string too short".into());
+    }
 
-    DateTime::parse_from_str(&date, "%A %e %B %Y %r %z")
-        .unwrap()
-        .timestamp()
+    let parsed_date = format!("{}{}", &date[..start_index], &date[end_index..])
+        .replace("CDT", "-0500");
+
+    let timestamp = DateTime::parse_from_str(&parsed_date, "%A %e %B %Y %r %z")?
+        .timestamp();
+    
+    Ok(timestamp)
 }

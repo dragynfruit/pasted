@@ -6,6 +6,14 @@ use crate::constants::URL;
 
 use super::{parse_date, user::SimpleUser, FromElement, FromHtml};
 
+// Helper function to safely parse dates with fallback to 0
+fn safe_parse_date(date_str: &str) -> i64 {
+    parse_date(date_str).unwrap_or_else(|e| {
+        eprintln!("Failed to parse date '{}': {}", date_str, e);
+        0 // Unix epoch as fallback
+    })
+}
+
 #[derive(Serialize)]
 pub struct PasteContainer {
     category: Option<String>,
@@ -103,7 +111,7 @@ impl FromElement for Comment {
     fn from_element(parent: &ElementRef) -> Self {
         let author = SimpleUser::from_element(&parent);
 
-        let date = parse_date(
+        let date = safe_parse_date(
             &parent
                 .select(&Selector::parse(&".date>span").unwrap())
                 .next()
@@ -115,7 +123,18 @@ impl FromElement for Comment {
         let edit_date = parent
             .select(&Selector::parse(&".date>span:nth-child(2)").unwrap())
             .next()
-            .map(|x| parse_date(x.attr("title").unwrap().split_once(":").unwrap().1.trim()));
+            .map(|x| {
+                if let Some(title) = x.attr("title") {
+                    if let Some((_, date_part)) = title.split_once(":") {
+                        Some(safe_parse_date(date_part.trim()))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .flatten();
 
         let container = PasteContainer::from_element(
             &parent
@@ -194,7 +213,7 @@ impl FromHtml for Paste {
 
         let author = SimpleUser::from_element(&parent);
 
-        let date = parse_date(
+        let date = safe_parse_date(
             &parent
                 .select(&Selector::parse(&".date>span").unwrap())
                 .next()
@@ -206,7 +225,18 @@ impl FromHtml for Paste {
         let edit_date = parent
             .select(&Selector::parse(&".date>span:nth-child(2)").unwrap())
             .next()
-            .map(|x| parse_date(x.attr("title").unwrap().split_once(":").unwrap().1.trim()));
+            .map(|x| {
+                if let Some(title) = x.attr("title") {
+                    if let Some((_, date_part)) = title.split_once(":") {
+                        Some(safe_parse_date(date_part.trim()))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .flatten();
 
         let views = parent
             .select(&Selector::parse(&".visits").unwrap())
@@ -346,10 +376,9 @@ mod tests {
 
     #[test]
     fn test_parse_date() {
-        assert_eq!(
-            parse_date("Thursday 2nd of May 2024 10:05:29 AM CDT"),
-            1714662329
-        );
+        let result = parse_date("Thursday 2nd of May 2024 10:05:29 AM CDT");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 1714662329);
     }
 
     #[test]

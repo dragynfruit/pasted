@@ -5,6 +5,14 @@ use crate::constants::URL;
 
 use super::{parse_date, FromElement, FromHtml};
 
+// Helper function to safely parse dates with fallback to 0
+fn safe_parse_date(date_str: &str) -> i64 {
+    parse_date(date_str).unwrap_or_else(|e| {
+        eprintln!("Failed to parse date '{}': {}", date_str, e);
+        0 // Unix epoch as fallback
+    })
+}
+
 #[derive(Serialize)]
 pub struct UserPaste {
     id: String,
@@ -174,7 +182,7 @@ impl FromHtml for User {
             .parse()
             .unwrap();
 
-        let date_joined = parse_date(
+        let date_joined = safe_parse_date(
             parent
                 .select(&Selector::parse(&".date-text").unwrap())
                 .next()
