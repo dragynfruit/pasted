@@ -18,9 +18,9 @@ use super::error;
 pub fn get_router(state: AppState) -> Router {
     Router::new()
         .route("/", routing::get(archive))
-        .route("/:format", routing::get(archive))
+        .route("/{format}", routing::get(archive))
         .route("/json", routing::get(archive_json))
-        .route("/json/:format", routing::get(archive_json))
+        .route("/json/{format}", routing::get(archive_json))
         .with_state(state)
 }
 

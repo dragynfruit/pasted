@@ -17,8 +17,8 @@ use super::error::{self, render_error, Error};
 
 pub fn get_router(state: AppState) -> Router {
     Router::new()
-        .route("/:username", routing::get(user))
-        .route("/json/:username", routing::get(json_user))
+        .route("/{username}", routing::get(user))
+        .route("/json/{username}", routing::get(json_user))
         .with_state(state)
 }
 

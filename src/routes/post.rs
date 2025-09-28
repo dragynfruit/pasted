@@ -1,15 +1,12 @@
 use axum::{
-    body::Body, extract::State, http::StatusCode, response::Response, routing, Form, Router
+    Form, Router, body::Body, extract::State, http::StatusCode, response::Response, routing,
 };
 use serde::Deserialize;
 use tera::Context;
-use ureq_multipart::MultipartBuilder;
 
-use crate::{
-    constants::URL, parsers::paste, state::AppState, templates::TEMPLATES
-};
+use crate::{constants::URL, parsers::paste, state::AppState, templates::TEMPLATES};
 
-use super::error::{self, render_error, Error, ErrorSource};
+use super::error::{self, Error, ErrorSource, render_error};
 
 #[derive(Deserialize)]
 struct Post {
@@ -30,79 +27,80 @@ pub fn get_router(state: AppState) -> Router {
 }
 
 async fn post() -> Result<Response<Body>, Response<Body>> {
-    TEMPLATES.render("post.html", &Context::new())
-        .map(|html| Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .header("Cache-Control", "public, max-age=31536000, immutable")
-            .body(Body::new(html))
-            .unwrap())
+    TEMPLATES
+        .render("post.html", &Context::new())
+        .map(|html| {
+            Response::builder()
+                .status(200)
+                .header("Content-Type", "text/html")
+                .header("Cache-Control", "public, max-age=31536000, immutable")
+                .body(Body::new(html))
+                .unwrap()
+        })
         .map_err(|e| render_error(Error::from(e)))
 }
 
 async fn post_create(
-    State(state): State<AppState>, 
-    Form(data): Form<Post>
+    State(state): State<AppState>,
+    Form(data): Form<Post>,
 ) -> Result<Response<Body>, Response<Body>> {
-    let csrf = state.client.get_html(format!("{URL}/").as_str())
+    let csrf = state
+        .client
+        .get_html(format!("{URL}/").as_str())
         .map_err(|e| error::construct_error(e))?;
 
     let csrf = paste::get_csrftoken(&csrf);
-    
-    let form = MultipartBuilder::new()
-        .add_text("_csrf-frontend", &csrf)
-        .unwrap()
-        .add_text("PostForm[text]", &data.text)
-        .unwrap()
-        .add_text("PostForm[category_id]", &data.category.to_string())
-        .unwrap()
-        .add_text("PostForm[tag]", &data.tags)
-        .unwrap()
-        .add_text("PostForm[format]", &data.format.to_string())
-        .unwrap()
-        .add_text("PostForm[expiration]", &data.expiration.to_string())
-        .unwrap()
-        .add_text("PostForm[status]", &data.exposure.to_string())
-        .unwrap()
-        .add_text(
-            "PostForm[is_password_enabled]",
-            if data.password.is_empty() { "0" } else { "1" },
-        )
-        .unwrap()
-        .add_text("PostForm[password]", &data.password)
-        .unwrap()
-        .add_text(
-            "PostForm[is_burn]",
-            if data.expiration == "B" { "1" } else { "0" },
-        )
-        .unwrap()
-        .add_text("PostForm[name]", &data.title)
-        .unwrap()
-        .add_text("PostForm[is_guest]", "1")
-        .unwrap()
-        .finish()
-        .map_err(|_e| render_error(Error::new(
-            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-            "Failed to create form".to_string(),
-            ErrorSource::Internal
-        )))?;
 
-    let response = state.client.post_response(format!("{URL}/").as_str(), form)
+    let form: Vec<(String, String)> = vec![
+        ("_csrf-frontend".to_string(), csrf),
+        ("PostForm[text]".to_string(), data.text),
+        (
+            "PostForm[category_id]".to_string(),
+            data.category.to_string(),
+        ),
+        ("PostForm[tag]".to_string(), data.tags),
+        ("PostForm[format]".to_string(), data.format.to_string()),
+        ("PostForm[expiration]".to_string(), data.expiration.to_string()),
+        ("PostForm[status]".to_string(), data.exposure.to_string()),
+        (
+            "PostForm[is_password_enabled]".to_string(),
+            (if data.password.is_empty() { "0" } else { "1" }).to_string(),
+        ),
+        ("PostForm[password]".to_string(), data.password),
+        (
+            "PostForm[is_burn]".to_string(),
+            (if data.expiration == "B" { "1" } else { "0" }).to_string(),
+        ),
+        ("PostForm[name]".to_string(), data.title),
+        ("PostForm[is_guest]".to_string(), "1".to_string()),
+    ];
+
+    let response = state
+        .client
+        .post_response(format!("{URL}/").as_str(), form)
         .map_err(|e| error::construct_error(e))?;
 
-    let paste_id = response.header("Location")
-        .ok_or_else(|| render_error(Error::new(
-            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-            "Missing Location header".to_string(),
-            ErrorSource::Internal
-        )))?
+    let paste_id = response
+        .headers()
+        .get("Location")
+        .ok_or_else(|| {
+            render_error(Error::new(
+                StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                "Missing Location header".to_string(),
+                ErrorSource::Internal,
+            ))
+        })?
+        .to_str()
+        .unwrap()
         .split("/")
         .last()
-        .ok_or_else(|| render_error(Error::new(
-            StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-            "Invalid Location header".to_string(),
-            ErrorSource::Internal
-        )))?;
+        .ok_or_else(|| {
+            render_error(Error::new(
+                StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                "Invalid Location header".to_string(),
+                ErrorSource::Internal,
+            ))
+        })?;
 
     Ok(Response::builder()
         .status(response.status())

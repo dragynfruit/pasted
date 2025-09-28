@@ -1,7 +1,7 @@
+use axum::http::Response;
 use scraper::Html;
-use ureq::{Agent, AgentBuilder};
+use ureq::{Agent, Body};
 use std::fmt;
-use std::io::Read;
 
 #[derive(Clone)]
 pub struct Client {
@@ -38,37 +38,37 @@ impl fmt::Display for ClientError {
 impl Client {
     pub fn new() -> Self {
         Self {
-            agent: AgentBuilder::new().redirects(0).build(),
+            agent: Agent::config_builder().max_redirects(0).build().new_agent(),
         }
     }
 
-    pub fn get_response(&self, url: &str) -> Result<ureq::Response, ClientError> {
+    pub fn get_response(&self, url: &str) -> Result<Response<Body>, ClientError> {
         Ok(self.agent.get(url).call()?)
     }
 
-    pub fn post_response(&self, url: &str, form: (String, Vec<u8>)) -> Result<ureq::Response, ClientError> {
+    pub fn post_response(&self, url: &str, form: Vec<(String, String)>) -> Result<Response<Body>, ClientError> {
         Ok(self.agent
             .post(url)
-            .set("Content-Type", &form.0)
-            .send_bytes(&form.1)?)
+            .send_form(form)?)
     }
 
     pub fn get_string(&self, url: &str) -> Result<String, ClientError> {
-        Ok(self.get_response(url)?.into_string()?)
+        let mut response = self.get_response(url)?;
+        Ok(response.body_mut().read_to_string()?)
     }
 
-    pub fn post_string(&self, url: &str, form: (String, Vec<u8>)) -> Result<String, ClientError> {
-        Ok(self.post_response(url, form)?.into_string()?)
+    pub fn post_string(&self, url: &str, form: Vec<(String, String)>) -> Result<String, ClientError> {
+        let mut response = self.post_response(url, form)?;
+        Ok(response.body_mut().read_to_string()?)
     }
 
     pub fn get_bytes(&self, url: &str) -> Result<Vec<u8>, ClientError> {
-        let mut data = Vec::new();
-        let mut reader = self.agent
+        let data = self.agent
             .get(url)
             .call()?
-            .into_reader();
+            .body_mut()
+            .read_to_vec()?;
         
-        reader.read_to_end(&mut data)?;
         Ok(data)
     }
 
@@ -77,7 +77,7 @@ impl Client {
             .map(|s| Html::parse_document(&s))
     }
 
-    pub fn post_html(&self, url: &str, form: (String, Vec<u8>)) -> Result<Html, ClientError> {
+    pub fn post_html(&self, url: &str, form: Vec<(String, String)>) -> Result<Html, ClientError> {
         self.post_string(url, form)
             .map(|s| Html::parse_document(&s))
     }

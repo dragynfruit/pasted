@@ -42,11 +42,14 @@ impl From<ClientError> for Error {
         match err {
             ClientError::UreqError(error) => {
                 let (status, message) = match error {
-                    ureq::Error::Status(code, response) => {
-                        (code, response.status_text().to_string())
+                    ureq::Error::StatusCode(code) => {
+                        (code, "".to_string())
                     }
-                    ureq::Error::Transport(transport) => {
+                    ureq::Error::Http(transport) => {
                         (StatusCode::BAD_GATEWAY.as_u16(), transport.to_string())
+                    }
+                    _ => {
+                        (0, "Unknown".to_string())
                     }
                 };
                 Error::new(status, message, ErrorSource::Upstream)

@@ -9,7 +9,7 @@ use super::error::{render_error, Error, ErrorSource};
 pub fn get_router(state: AppState) -> Router {
     Router::new()
         .route("/guest.png", routing::get(guest))
-        .route("/:id0/:id1/:id2/:id3.jpg", routing::get(icon))
+        .route("/{id0}/{id1}/{id2}/{id3}", routing::get(icon))
         .with_state(state)
 }
 

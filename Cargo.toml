@@ -1,7 +1,7 @@
 [package]
 name = "pasted"
-version = "1.2.32"
-edition = "2021"
+version = "1.2.33"
+edition = "2024"
 authors = ["drakeerv <drakeerv@outlook.com>"]
 description = "A pastebin frontend written in Rust"
 build = "build.rs"
@@ -14,17 +14,16 @@ include_templates = ["dep:include_dir"]
 chrono = { version = "0.4.38", default-features = false, features = ["clock", "std"] }
 
 [dependencies]
-axum = { version = "0.7.6", default-features = false, features = ["tokio", "http1", "json", "matched-path", "form"] }
+axum = { version = "0.8.4", default-features = false, features = ["tokio", "http1", "json", "matched-path", "form"] }
 byte-unit = "5.1.6"
 chrono = { version = "0.4.38", default-features = false, features = ["clock", "std"] }
 once_cell = "1.20.2"
-scraper = "0.23.1"
+scraper = "0.24.0"
 serde = { version = "1.0.215", features = ["derive"] }
 sled = { version = "0.34.7", default-features = false }
 tera = { version = "1.20.0", default-features = false }
 tokio = { version = "1.40.1", features = ["rt-multi-thread", "macros", "signal"] }
-ureq = { version = "2.12.1", features = ["cookies"] }
-ureq_multipart = "1.1.1"
+ureq = { version = "3.1.2", features = ["cookies"] }
 include_dir = { version = "0.7.4", optional = true }
 
 [profile.release]

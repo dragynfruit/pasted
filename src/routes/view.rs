@@ -15,7 +15,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tera::Context;
-use ureq_multipart::MultipartBuilder;
 
 use super::error;
 
@@ -37,15 +36,15 @@ struct Unlock {
 
 pub fn get_router(state: AppState) -> Router {
     Router::new()
-        .route("/raw/:id", routing::get(view_raw))
-        .route("/json/:id", routing::get(view_json))
-        .route("/dl/:id", routing::get(view_download))
-        .route("/print/:id", routing::get(view_print))
-        .route("/clone/:id", routing::get(view_clone))
-        .route("/embed/:id", routing::get(view_embed))
-        .route("/embed_js/:id", routing::get(view_embed_js))
-        .route("/embed_iframe/:id", routing::get(view_embed_iframe))
-        .route("/:id", routing::get(view).post(view_locked))
+        .route("/raw/{id}", routing::get(view_raw))
+        .route("/json/{id}", routing::get(view_json))
+        .route("/dl/{id}", routing::get(view_download))
+        .route("/print/{id}", routing::get(view_print))
+        .route("/clone/{id}", routing::get(view_clone))
+        .route("/embed/{id}", routing::get(view_embed))
+        .route("/embed_js/{id}", routing::get(view_embed_js))
+        .route("/embed_iframe/{id}", routing::get(view_embed_iframe))
+        .route("/{id}", routing::get(view).post(view_locked))
         .with_state(state)
 }
 
@@ -195,18 +194,14 @@ async fn view_locked(
 
     let csrf = paste::get_csrftoken(&csrf.unwrap());
 
-    let form = MultipartBuilder::new()
-        .add_text("_csrf-frontend", &csrf)
-        .unwrap()
-        .add_text(
-            "PostPasswordVerificationForm[password]",
-            &data.password.unwrap_or("".to_owned()),
-        )
-        .unwrap()
-        .add_text("is_burn", "1")
-        .unwrap()
-        .finish()
-        .unwrap();
+    let form = vec![
+        ("_csrf-frontend".to_string(), csrf),
+        (
+            "PostPasswordVerificationForm[password]".to_string(),
+            data.password.unwrap_or("".to_owned()),
+        ),
+        ("is_burn".to_string(), "1".to_string()),
+    ];
 
     let dom = state.client.post_html(format!("{URL}/{id}").as_str(), form);
 

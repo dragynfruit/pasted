@@ -1,7 +1,6 @@
 use axum::{
     body::Body,
     extract::State,
-    http::StatusCode,
     response::Response,
     routing, Json, Router,
 };
@@ -10,7 +9,7 @@ use std::sync::OnceLock;
 use tera::Context;
 
 use crate::{state::AppState, templates::TEMPLATES};
-use super::error::{Error, ErrorSource, render_error};
+use super::error::{Error, render_error};
 
 pub static DEPLOY_DATE: OnceLock<String> = OnceLock::new();
 

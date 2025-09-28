@@ -17,8 +17,8 @@ pub fn get_router(state: AppState) -> Router {
         .nest("/archive", archive::get_router(state.clone()))
         .nest("/u", users::get_router(state.clone()))
         .nest("/imgs", imgs::get_router(state.clone()))
-        .nest("/", post::get_router(state.clone()))
-        .nest("/", public::get_router())
-        .nest("/", view::get_router(state.clone()))
+        .merge(post::get_router(state.clone()))
+        .merge(public::get_router())
+        .merge(view::get_router(state.clone()))
         .fallback(error::error_404)
 }
