@@ -52,12 +52,10 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
 fn format_date(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
     if let Some(num) = value.as_i64() {
         match DateTime::from_timestamp(num, 0) {
-            Some(dt) => {
-                match tera::to_value(dt.to_rfc3339()) {
-                    Ok(v) => Ok(v),
-                    Err(e) => Err(Error::msg(format!("Failed to serialize date: {}", e))),
-                }
-            }
+            Some(dt) => match tera::to_value(dt.to_rfc3339()) {
+                Ok(v) => Ok(v),
+                Err(e) => Err(Error::msg(format!("Failed to serialize date: {}", e))),
+            },
             None => Err(Error::msg("Invalid timestamp value")),
         }
     } else {
@@ -74,7 +72,10 @@ fn format_date_user(value: &Value, _: &HashMap<String, Value>) -> Result<Value> 
                 let formatted = dt.format("%D %r %Z").to_string();
                 match tera::to_value(formatted) {
                     Ok(v) => Ok(v),
-                    Err(e) => Err(Error::msg(format!("Failed to serialize formatted date: {}", e))),
+                    Err(e) => Err(Error::msg(format!(
+                        "Failed to serialize formatted date: {}",
+                        e
+                    ))),
                 }
             }
             None => Err(Error::msg("Invalid timestamp value")),

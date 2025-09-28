@@ -1,7 +1,7 @@
 use axum::http::Response;
 use scraper::Html;
-use ureq::{Agent, Body};
 use std::fmt;
+use ureq::{Agent, Body};
 
 #[derive(Clone)]
 pub struct Client {
@@ -11,7 +11,7 @@ pub struct Client {
 #[derive(Debug)]
 pub enum ClientError {
     UreqError(ureq::Error),
-    IoError(std::io::Error)
+    IoError(std::io::Error),
 }
 
 impl From<ureq::Error> for ClientError {
@@ -46,10 +46,12 @@ impl Client {
         Ok(self.agent.get(url).call()?)
     }
 
-    pub fn post_response(&self, url: &str, form: Vec<(String, String)>) -> Result<Response<Body>, ClientError> {
-        Ok(self.agent
-            .post(url)
-            .send_form(form)?)
+    pub fn post_response(
+        &self,
+        url: &str,
+        form: Vec<(String, String)>,
+    ) -> Result<Response<Body>, ClientError> {
+        Ok(self.agent.post(url).send_form(form)?)
     }
 
     pub fn get_string(&self, url: &str) -> Result<String, ClientError> {
@@ -57,24 +59,23 @@ impl Client {
         Ok(response.body_mut().read_to_string()?)
     }
 
-    pub fn post_string(&self, url: &str, form: Vec<(String, String)>) -> Result<String, ClientError> {
+    pub fn post_string(
+        &self,
+        url: &str,
+        form: Vec<(String, String)>,
+    ) -> Result<String, ClientError> {
         let mut response = self.post_response(url, form)?;
         Ok(response.body_mut().read_to_string()?)
     }
 
     pub fn get_bytes(&self, url: &str) -> Result<Vec<u8>, ClientError> {
-        let data = self.agent
-            .get(url)
-            .call()?
-            .body_mut()
-            .read_to_vec()?;
-        
+        let data = self.agent.get(url).call()?.body_mut().read_to_vec()?;
+
         Ok(data)
     }
 
     pub fn get_html(&self, url: &str) -> Result<Html, ClientError> {
-        self.get_string(url)
-            .map(|s| Html::parse_document(&s))
+        self.get_string(url).map(|s| Html::parse_document(&s))
     }
 
     pub fn post_html(&self, url: &str, form: Vec<(String, String)>) -> Result<Html, ClientError> {

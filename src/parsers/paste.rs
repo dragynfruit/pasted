@@ -1,10 +1,10 @@
 use byte_unit::Byte;
-use scraper::{selectable::Selectable, ElementRef, Html, Selector};
+use scraper::{ElementRef, Html, Selector, selectable::Selectable};
 use serde::Serialize;
 
 use crate::constants::URL;
 
-use super::{parse_date, user::SimpleUser, FromElement, FromHtml};
+use super::{FromElement, FromHtml, parse_date, user::SimpleUser};
 
 // Helper function to safely parse dates with fallback to 0
 fn safe_parse_date(date_str: &str) -> i64 {

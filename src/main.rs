@@ -1,4 +1,3 @@
-
 use axum;
 use state::AppState;
 use std::env;
@@ -7,8 +6,8 @@ use tokio::net::TcpListener;
 mod client;
 mod constants;
 mod parsers;
-mod state;
 mod routes;
+mod state;
 mod templates;
 
 #[tokio::main]
@@ -26,9 +25,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(e.into());
         }
     };
-    
+
     let app = routes::get_router(state);
-    
+
     let listener = match TcpListener::bind(&addr).await {
         Ok(listener) => listener,
         Err(e) => {
@@ -38,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     println!("Listening at {}", addr);
-    
+
     if let Err(e) = axum::serve(listener, app)
         .with_graceful_shutdown(async {
             match tokio::signal::ctrl_c().await {

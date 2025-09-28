@@ -1,10 +1,10 @@
+use once_cell::sync::Lazy;
 use scraper::{ElementRef, Html, Selector};
 use serde::Serialize;
-use once_cell::sync::Lazy;
 
 use crate::constants::URL;
 
-use super::{parse_date, FromElement, FromHtml};
+use super::{FromElement, FromHtml, parse_date};
 
 // Helper function to safely parse dates with fallback to 0
 fn safe_parse_date(date_str: &str) -> i64 {
@@ -15,24 +15,18 @@ fn safe_parse_date(date_str: &str) -> i64 {
 }
 
 // Pre-compiled selectors to avoid unwrap() calls
-static SELECTOR_TD_CHILD_1_A: Lazy<Selector> = Lazy::new(|| {
-    Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector")
-});
-static SELECTOR_TD_CHILD_2: Lazy<Selector> = Lazy::new(|| {
-    Selector::parse("td:nth-child(2)").expect("Valid CSS selector")
-});
-static SELECTOR_TD_CHILD_3: Lazy<Selector> = Lazy::new(|| {
-    Selector::parse("td:nth-child(3)").expect("Valid CSS selector")
-});
-static SELECTOR_TD_CHILD_4: Lazy<Selector> = Lazy::new(|| {
-    Selector::parse("td:nth-child(4)").expect("Valid CSS selector")
-});
-static SELECTOR_TD_CHILD_5: Lazy<Selector> = Lazy::new(|| {
-    Selector::parse("td:nth-child(5)").expect("Valid CSS selector")
-});
-static SELECTOR_TD_CHILD_6_A: Lazy<Selector> = Lazy::new(|| {
-    Selector::parse("td:nth-child(6)>a").expect("Valid CSS selector")
-});
+static SELECTOR_TD_CHILD_1_A: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_2: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(2)").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_3: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(3)").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_4: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(4)").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_5: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(5)").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_6_A: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(6)>a").expect("Valid CSS selector"));
 
 // Helper function to safely get text content from an element
 fn safe_text_content(element: Option<ElementRef>) -> String {
@@ -63,8 +57,7 @@ pub struct UserPaste {
 impl FromElement for UserPaste {
     fn from_element(parent: &ElementRef) -> Self {
         let id_link = parent.select(&SELECTOR_TD_CHILD_1_A).next();
-        let id = safe_attr_content(id_link, "href")
-            .replace("/", "");
+        let id = safe_attr_content(id_link, "href").replace("/", "");
 
         let title = safe_text_content(id_link);
 
@@ -98,10 +91,8 @@ impl FromElement for UserPaste {
             })
             .unwrap_or(0);
 
-        let format = safe_attr_content(
-            parent.select(&SELECTOR_TD_CHILD_6_A).next(),
-            "href"
-        ).replace("/archive/", "");
+        let format = safe_attr_content(parent.select(&SELECTOR_TD_CHILD_6_A).next(), "href")
+            .replace("/archive/", "");
 
         UserPaste {
             id,

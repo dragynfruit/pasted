@@ -66,7 +66,10 @@ async fn post_create(
         ),
         ("PostForm[tag]".to_string(), data.tags),
         ("PostForm[format]".to_string(), data.format.to_string()),
-        ("PostForm[expiration]".to_string(), data.expiration.to_string()),
+        (
+            "PostForm[expiration]".to_string(),
+            data.expiration.to_string(),
+        ),
         ("PostForm[status]".to_string(), data.exposure.to_string()),
         (
             "PostForm[is_password_enabled]".to_string(),

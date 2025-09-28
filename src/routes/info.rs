@@ -1,15 +1,10 @@
-use axum::{
-    body::Body,
-    extract::State,
-    response::Response,
-    routing, Json, Router,
-};
+use axum::{Json, Router, body::Body, extract::State, response::Response, routing};
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tera::Context;
 
-use crate::{state::AppState, templates::TEMPLATES};
 use super::error::{Error, render_error};
+use crate::{state::AppState, templates::TEMPLATES};
 
 pub static DEPLOY_DATE: OnceLock<String> = OnceLock::new();
 
@@ -71,7 +66,7 @@ async fn info(State(state): State<AppState>) -> Result<Response<Body>, Response<
         Ok(ctx) => ctx,
         Err(e) => return Err(render_error(Error::from(e))),
     };
-    
+
     TEMPLATES
         .render("info.html", &context)
         .map(|html| {

@@ -1,24 +1,30 @@
 use axum::{
+    Json, Router,
     body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
-    routing, Json, Router,
+    routing,
 };
 use tera::Context;
 
 use crate::{
     constants::URL,
-    parsers::{user::User, FromHtml as _},
+    parsers::{FromHtml as _, user::User},
     state::AppState,
     templates::TEMPLATES,
 };
 
-use super::error::{self, render_error, Error, AppError};
+use super::error::{self, AppError, Error, render_error};
 
 // Helper function to render templates safely
-fn safe_render_template<T: serde::Serialize>(template_name: &str, context: &T) -> Result<String, AppError> {
+fn safe_render_template<T: serde::Serialize>(
+    template_name: &str,
+    context: &T,
+) -> Result<String, AppError> {
     let ctx = Context::from_serialize(context).map_err(|e| AppError::Template(e))?;
-    TEMPLATES.render(template_name, &ctx).map_err(|e| AppError::Template(e))
+    TEMPLATES
+        .render(template_name, &ctx)
+        .map_err(|e| AppError::Template(e))
 }
 
 // Helper function to create HTML responses
@@ -55,12 +61,14 @@ async fn user(State(state): State<AppState>, Path(username): Path<String>) -> im
 }
 
 async fn json_user(
-    State(state): State<AppState>, 
-    Path(username): Path<String>
+    State(state): State<AppState>,
+    Path(username): Path<String>,
 ) -> Result<Json<User>, Response<Body>> {
-    let dom = state.client.get_html(&format!("{URL}/u/{username}"))
+    let dom = state
+        .client
+        .get_html(&format!("{URL}/u/{username}"))
         .map_err(|e| error::construct_error(e))?;
-    
+
     let user = User::from_html(&dom);
     Ok(Json(user))
 }

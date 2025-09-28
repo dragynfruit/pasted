@@ -1,14 +1,15 @@
 use axum::{
+    Json, Router,
     body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
-    routing, Json, Router,
+    routing,
 };
 use tera::Context;
 
 use crate::{
     constants::URL,
-    parsers::{archive::ArchivePage, FromHtml},
+    parsers::{FromHtml, archive::ArchivePage},
     state::AppState,
     templates::TEMPLATES,
 };
@@ -16,9 +17,14 @@ use crate::{
 use super::error::{self, AppError, Error as PasteError};
 
 // Helper function to render templates safely
-fn safe_render_template<T: serde::Serialize>(template_name: &str, context: &T) -> Result<String, AppError> {
+fn safe_render_template<T: serde::Serialize>(
+    template_name: &str,
+    context: &T,
+) -> Result<String, AppError> {
     let ctx = Context::from_serialize(context).map_err(|e| AppError::Template(e))?;
-    TEMPLATES.render(template_name, &ctx).map_err(|e| AppError::Template(e))
+    TEMPLATES
+        .render(template_name, &ctx)
+        .map_err(|e| AppError::Template(e))
 }
 
 // Helper function to create HTML responses

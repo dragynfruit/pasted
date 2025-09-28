@@ -75,7 +75,7 @@ impl FromHtml for ArchivePage {
                 .attr("content")
                 .unwrap()
                 .replace(&format!("{URL}/archive"), "")
-                .replace("/", "")
+                .replace("/", ""),
         );
 
         let parent = dom

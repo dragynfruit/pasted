@@ -1,17 +1,18 @@
 use crate::{
     constants::URL,
     parsers::{
-        paste::{self, Paste},
         FromHtml as _,
+        paste::{self, Paste},
     },
     state::AppState,
     templates::TEMPLATES,
 };
 use axum::{
+    Form, Json, Router,
     body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
-    routing, Form, Json, Router,
+    routing,
 };
 use serde::{Deserialize, Serialize};
 use tera::Context;
@@ -19,9 +20,14 @@ use tera::Context;
 use super::error::{self, AppError, Error as PasteError, ErrorSource};
 
 // Helper function to render templates safely
-fn safe_render_template<T: serde::Serialize>(template_name: &str, context: &T) -> Result<String, AppError> {
+fn safe_render_template<T: serde::Serialize>(
+    template_name: &str,
+    context: &T,
+) -> Result<String, AppError> {
     let ctx = Context::from_serialize(context).map_err(|e| AppError::Template(e))?;
-    TEMPLATES.render(template_name, &ctx).map_err(|e| AppError::Template(e))
+    TEMPLATES
+        .render(template_name, &ctx)
+        .map_err(|e| AppError::Template(e))
 }
 
 // Helper function to create HTML responses
@@ -172,7 +178,8 @@ async fn view_embed_js(State(state): State<AppState>, Path(id): Path<String>) ->
             let paste = Paste::from_html(&dom);
             match safe_render_template("embed_iframe.html", &paste) {
                 Ok(rendered) => {
-                    let js_content = format!("document.write('{}');", rendered.replace('\'', "\\'"));
+                    let js_content =
+                        format!("document.write('{}');", rendered.replace('\'', "\\'"));
                     match Response::builder()
                         .status(200)
                         .header("Content-Type", "text/javascript")

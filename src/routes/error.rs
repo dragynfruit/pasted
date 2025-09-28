@@ -165,15 +165,11 @@ impl From<ClientError> for Error {
         match err {
             ClientError::UreqError(error) => {
                 let (status, message) = match error {
-                    ureq::Error::StatusCode(code) => {
-                        (code, "".to_string())
-                    }
+                    ureq::Error::StatusCode(code) => (code, "".to_string()),
                     ureq::Error::Http(transport) => {
                         (StatusCode::BAD_GATEWAY.as_u16(), transport.to_string())
                     }
-                    _ => {
-                        (0, "Unknown".to_string())
-                    }
+                    _ => (0, "Unknown".to_string()),
                 };
                 Error::new(status, message, ErrorSource::Upstream)
             }
@@ -187,7 +183,7 @@ impl From<ClientError> for Error {
                     None
                 },
                 source: ErrorSource::Internal,
-            }
+            },
         }
     }
 }
@@ -217,7 +213,7 @@ pub fn render_error(error: Error) -> Response<Body> {
             Ok(format!("Error {} - {}", error.status, error.message))
         }
     };
-    
+
     let body = match template_result {
         Ok(rendered) => rendered,
         Err(template_err) => {

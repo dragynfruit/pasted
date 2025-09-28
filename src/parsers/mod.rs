@@ -14,7 +14,8 @@ pub trait FromElement {
 }
 
 pub fn parse_date(date: &str) -> Result<i64, Box<dyn std::error::Error>> {
-    let start_index = date.find(" of")
+    let start_index = date
+        .find(" of")
         .ok_or("Date string missing ' of' marker")?
         .checked_sub(2)
         .ok_or("Invalid date format")?;
@@ -24,11 +25,10 @@ pub fn parse_date(date: &str) -> Result<i64, Box<dyn std::error::Error>> {
         return Err("Date string too short".into());
     }
 
-    let parsed_date = format!("{}{}", &date[..start_index], &date[end_index..])
-        .replace("CDT", "-0500");
+    let parsed_date =
+        format!("{}{}", &date[..start_index], &date[end_index..]).replace("CDT", "-0500");
 
-    let timestamp = DateTime::parse_from_str(&parsed_date, "%A %e %B %Y %r %z")?
-        .timestamp();
-    
+    let timestamp = DateTime::parse_from_str(&parsed_date, "%A %e %B %Y %r %z")?.timestamp();
+
     Ok(timestamp)
 }
