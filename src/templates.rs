@@ -17,10 +17,10 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
 
         let templates = dir
             .files()
-            .map(|file| {
-                let name = file.path().to_str().unwrap();
-                let content = std::str::from_utf8(file.contents()).unwrap();
-                (name, content)
+            .filter_map(|file| {
+                let name = file.path().to_str()?;
+                let content = std::str::from_utf8(file.contents()).ok()?;
+                Some((name, content))
             })
             .collect::<Vec<_>>();
 
@@ -51,7 +51,13 @@ pub static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
 
 fn format_date(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
     if let Some(num) = value.as_i64() {
-        Ok(tera::to_value(DateTime::from_timestamp(num, 0).unwrap().to_rfc3339()).unwrap())
+        match DateTime::from_timestamp(num, 0) {
+            Some(dt) => match tera::to_value(dt.to_rfc3339()) {
+                Ok(v) => Ok(v),
+                Err(e) => Err(Error::msg(format!("Failed to serialize date: {}", e))),
+            },
+            None => Err(Error::msg("Invalid timestamp value")),
+        }
     } else {
         Err(Error::msg(
             "Filter `format_date` was used on a value that isn't a valid number.",
@@ -61,13 +67,19 @@ fn format_date(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
 
 fn format_date_user(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
     if let Some(num) = value.as_i64() {
-        Ok(tera::to_value(
-            DateTime::from_timestamp(num, 0)
-                .unwrap()
-                .format("%D %r %Z")
-                .to_string(),
-        )
-        .unwrap())
+        match DateTime::from_timestamp(num, 0) {
+            Some(dt) => {
+                let formatted = dt.format("%D %r %Z").to_string();
+                match tera::to_value(formatted) {
+                    Ok(v) => Ok(v),
+                    Err(e) => Err(Error::msg(format!(
+                        "Failed to serialize formatted date: {}",
+                        e
+                    ))),
+                }
+            }
+            None => Err(Error::msg("Invalid timestamp value")),
+        }
     } else {
         Err(Error::msg(
             "Filter `format_date` was used on a value that isn't a valid number.",
@@ -77,11 +89,14 @@ fn format_date_user(value: &Value, _: &HashMap<String, Value>) -> Result<Value> 
 
 fn format_bytes(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
     if let Some(num) = value.as_u64() {
-        Ok(tera::to_value(format!(
+        let formatted = format!(
             "{:#}",
             Byte::from_u64(num).get_appropriate_unit(UnitType::Decimal)
-        ))
-        .unwrap())
+        );
+        match tera::to_value(formatted) {
+            Ok(v) => Ok(v),
+            Err(e) => Err(Error::msg(format!("Failed to serialize byte value: {}", e))),
+        }
     } else {
         Err(Error::msg(
             "Filter `format_bytes` was used on a value that isn't a valid number.",
@@ -90,7 +105,10 @@ fn format_bytes(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
 }
 
 fn get_banner(_: &HashMap<String, Value>) -> Result<Value> {
-    Ok(tera::to_value(BANNER.clone()).unwrap())
+    match tera::to_value(BANNER.clone()) {
+        Ok(v) => Ok(v),
+        Err(e) => Err(Error::msg(format!("Failed to serialize banner: {}", e))),
+    }
 }
 
 #[cfg(test)]
@@ -98,23 +116,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_format_date() {
-        let value = tera::to_value(1618033988).unwrap();
-        let result = format_date(&value, &HashMap::new()).unwrap();
-        assert_eq!(result.as_str().unwrap(), "2021-04-10T05:53:08+00:00");
+    fn test_format_date() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let value = tera::to_value(1618033988)?;
+        let result = format_date(&value, &HashMap::new())?;
+        assert_eq!(result.as_str().unwrap_or(""), "2021-04-10T05:53:08+00:00");
+        Ok(())
     }
 
     #[test]
-    fn test_format_date_user() {
-        let value = tera::to_value(1618033988).unwrap();
-        let result = format_date_user(&value, &HashMap::new()).unwrap();
-        assert_eq!(result.as_str().unwrap(), "04/10/21 05:53:08 AM UTC");
+    fn test_format_date_user() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let value = tera::to_value(1618033988)?;
+        let result = format_date_user(&value, &HashMap::new())?;
+        assert_eq!(result.as_str().unwrap_or(""), "04/10/21 05:53:08 AM UTC");
+        Ok(())
     }
 
     #[test]
-    fn test_format_bytes() {
-        let value = tera::to_value(147483647).unwrap();
-        let result = format_bytes(&value, &HashMap::new()).unwrap();
-        assert_eq!(result.as_str().unwrap(), "147.483647 MB");
+    fn test_format_bytes() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let value = tera::to_value(147483647)?;
+        let result = format_bytes(&value, &HashMap::new())?;
+        assert_eq!(result.as_str().unwrap_or(""), "147.483647 MB");
+        Ok(())
     }
 }

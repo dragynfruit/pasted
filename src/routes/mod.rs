@@ -2,10 +2,10 @@ use axum::Router;
 
 use crate::state::AppState;
 
-pub mod info;
 mod archive;
 mod error;
 mod imgs;
+pub mod info;
 mod post;
 mod public;
 mod users;

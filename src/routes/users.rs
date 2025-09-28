@@ -1,19 +1,40 @@
 use axum::{
+    Json, Router,
     body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
-    routing, Json, Router,
+    routing,
 };
 use tera::Context;
 
 use crate::{
     constants::URL,
-    parsers::{user::User, FromHtml as _},
+    parsers::{FromHtml as _, user::User},
     state::AppState,
     templates::TEMPLATES,
 };
 
-use super::error::{self, render_error, Error};
+use super::error::{self, AppError, Error, render_error};
+
+// Helper function to render templates safely
+fn safe_render_template<T: serde::Serialize>(
+    template_name: &str,
+    context: &T,
+) -> Result<String, AppError> {
+    let ctx = Context::from_serialize(context).map_err(|e| AppError::Template(e))?;
+    TEMPLATES
+        .render(template_name, &ctx)
+        .map_err(|e| AppError::Template(e))
+}
+
+// Helper function to create HTML responses
+fn create_html_response(content: String, status: u16) -> Result<Response<Body>, AppError> {
+    Response::builder()
+        .status(status)
+        .header("Content-Type", "text/html")
+        .body(Body::from(content))
+        .map_err(|e| AppError::Server(format!("Failed to build response: {}", e)))
+}
 
 pub fn get_router(state: AppState) -> Router {
     Router::new()
@@ -27,13 +48,12 @@ async fn user(State(state): State<AppState>, Path(username): Path<String>) -> im
     match dom {
         Ok(dom) => {
             let user = User::from_html(&dom);
-            match TEMPLATES.render("user.html", &Context::from_serialize(&user).unwrap() ) {
-                Ok(html) => Response::builder()
-                    .status(200)
-                    .header("Content-Type", "text/html")
-                    .body(Body::new(html))
-                    .unwrap(),
-                Err(err) => render_error(Error::from(err)),
+            match safe_render_template("user.html", &user) {
+                Ok(rendered) => match create_html_response(rendered, 200) {
+                    Ok(response) => response,
+                    Err(app_err) => render_error(Error::from(app_err)),
+                },
+                Err(app_err) => render_error(Error::from(app_err)),
             }
         }
         Err(err) => error::construct_error(err),
@@ -41,12 +61,14 @@ async fn user(State(state): State<AppState>, Path(username): Path<String>) -> im
 }
 
 async fn json_user(
-    State(state): State<AppState>, 
-    Path(username): Path<String>
+    State(state): State<AppState>,
+    Path(username): Path<String>,
 ) -> Result<Json<User>, Response<Body>> {
-    let dom = state.client.get_html(&format!("{URL}/u/{username}"))
+    let dom = state
+        .client
+        .get_html(&format!("{URL}/u/{username}"))
         .map_err(|e| error::construct_error(e))?;
-    
+
     let user = User::from_html(&dom);
     Ok(Json(user))
 }
