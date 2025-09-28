@@ -1,5 +1,6 @@
 use scraper::{ElementRef, Html, Selector};
 use serde::Serialize;
+use once_cell::sync::Lazy;
 
 use crate::constants::URL;
 
@@ -11,6 +12,41 @@ fn safe_parse_date(date_str: &str) -> i64 {
         eprintln!("Failed to parse date '{}': {}", date_str, e);
         0 // Unix epoch as fallback
     })
+}
+
+// Pre-compiled selectors to avoid unwrap() calls
+static SELECTOR_TD_CHILD_1_A: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector")
+});
+static SELECTOR_TD_CHILD_2: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse("td:nth-child(2)").expect("Valid CSS selector")
+});
+static SELECTOR_TD_CHILD_3: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse("td:nth-child(3)").expect("Valid CSS selector")
+});
+static SELECTOR_TD_CHILD_4: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse("td:nth-child(4)").expect("Valid CSS selector")
+});
+static SELECTOR_TD_CHILD_5: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse("td:nth-child(5)").expect("Valid CSS selector")
+});
+static SELECTOR_TD_CHILD_6_A: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse("td:nth-child(6)>a").expect("Valid CSS selector")
+});
+
+// Helper function to safely get text content from an element
+fn safe_text_content(element: Option<ElementRef>) -> String {
+    element
+        .map(|e| e.text().collect::<String>().trim().to_owned())
+        .unwrap_or_default()
+}
+
+// Helper function to safely get an attribute from an element
+fn safe_attr_content(element: Option<ElementRef>, attr: &str) -> String {
+    element
+        .and_then(|el| el.value().attr(attr))
+        .unwrap_or_default()
+        .to_owned()
 }
 
 #[derive(Serialize)]
@@ -26,71 +62,46 @@ pub struct UserPaste {
 
 impl FromElement for UserPaste {
     fn from_element(parent: &ElementRef) -> Self {
-        let id = parent
-            .select(&Selector::parse(&"td:nth-child(1)>a").unwrap())
-            .next()
-            .unwrap()
-            .attr("href")
-            .unwrap()
-            .replace("/", "")
-            .to_owned();
+        let id_link = parent.select(&SELECTOR_TD_CHILD_1_A).next();
+        let id = safe_attr_content(id_link, "href")
+            .replace("/", "");
 
-        let title = parent
-            .select(&Selector::parse(&"td:nth-child(1)>a").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+        let title = safe_text_content(id_link);
 
-        let age = parent
-            .select(&Selector::parse(&"td:nth-child(2)").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+        let age = safe_text_content(parent.select(&SELECTOR_TD_CHILD_2).next());
 
-        let expires = parent
-            .select(&Selector::parse(&"td:nth-child(3)").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+        let expires = safe_text_content(parent.select(&SELECTOR_TD_CHILD_3).next());
 
         let views = parent
-            .select(&Selector::parse(&"td:nth-child(4)").unwrap())
+            .select(&SELECTOR_TD_CHILD_4)
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+            .and_then(|el| {
+                el.text()
+                    .collect::<String>()
+                    .trim()
+                    .replace(",", "")
+                    .parse()
+                    .ok()
+            })
+            .unwrap_or(0);
 
         let num_comments = parent
-            .select(&Selector::parse(&"td:nth-child(5)").unwrap())
+            .select(&SELECTOR_TD_CHILD_5)
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+            .and_then(|el| {
+                el.text()
+                    .collect::<String>()
+                    .trim()
+                    .replace(",", "")
+                    .parse()
+                    .ok()
+            })
+            .unwrap_or(0);
 
-        let format = parent
-            .select(&Selector::parse(&"td:nth-child(6)>a").unwrap())
-            .next()
-            .unwrap()
-            .attr("href")
-            .unwrap()
-            .replace("/archive/", "");
+        let format = safe_attr_content(
+            parent.select(&SELECTOR_TD_CHILD_6_A).next(),
+            "href"
+        ).replace("/archive/", "");
 
         UserPaste {
             id,

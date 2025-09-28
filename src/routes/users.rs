@@ -13,7 +13,7 @@ use crate::{
     templates::TEMPLATES,
 };
 
-use super::error::{self, render_error, Error, ErrorSource, AppError};
+use super::error::{self, render_error, Error, AppError};
 
 // Helper function to render templates safely
 fn safe_render_template<T: serde::Serialize>(template_name: &str, context: &T) -> Result<String, AppError> {
