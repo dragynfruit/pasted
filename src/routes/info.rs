@@ -43,13 +43,13 @@ fn get_info(state: AppState) -> InstanceInfo {
     let commit = "Currently Broken";
 
     let build_date = env!("BUILD_DATE");
-    let deploy_date = DEPLOY_DATE.get().unwrap();
+    let deploy_date = DEPLOY_DATE.get().map(|s| s.as_str()).unwrap_or("Unknown");
 
     InstanceInfo {
         version: env!("CARGO_PKG_VERSION"),
         name: env!("CARGO_PKG_NAME"),
         is_release: !cfg!(debug_assertions),
-        db_size: state.db.size_on_disk().unwrap(),
+        db_size: state.db.size_on_disk().unwrap_or(0),
         action_name: env!("ACTION_NAME"),
         commit,
         build_date,
@@ -67,14 +67,25 @@ pub fn get_router(state: AppState) -> Router {
 
 async fn info(State(state): State<AppState>) -> Result<Response<Body>, Response<Body>> {
     let info = get_info(state);
+    let context = match Context::from_serialize(&info) {
+        Ok(ctx) => ctx,
+        Err(e) => return Err(render_error(Error::from(e))),
+    };
+    
     TEMPLATES
-        .render("info.html", &Context::from_serialize(&info).unwrap())
+        .render("info.html", &context)
         .map(|html| {
             Response::builder()
                 .status(200)
                 .header("Content-Type", "text/html")
                 .body(Body::new(html))
-                .unwrap()
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to build info response: {}", e);
+                    Response::builder()
+                        .status(500)
+                        .body(Body::from("Internal server error"))
+                        .unwrap()
+                })
         })
         .map_err(|e| render_error(Error::from(e)))
 }

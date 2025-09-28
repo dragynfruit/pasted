@@ -16,7 +16,22 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use tera::Context;
 
-use super::error;
+use super::error::{self, AppError, Error as PasteError, ErrorSource};
+
+// Helper function to render templates safely
+fn safe_render_template<T: serde::Serialize>(template_name: &str, context: &T) -> Result<String, AppError> {
+    let ctx = Context::from_serialize(context).map_err(|e| AppError::Template(e))?;
+    TEMPLATES.render(template_name, &ctx).map_err(|e| AppError::Template(e))
+}
+
+// Helper function to create HTML responses
+fn create_html_response(content: String, status: u16) -> Result<Response<Body>, AppError> {
+    Response::builder()
+        .status(status)
+        .header("Content-Type", "text/html")
+        .body(Body::from(content))
+        .map_err(|e| AppError::Server(format!("Failed to build response: {}", e)))
+}
 
 #[derive(Serialize)]
 struct Page {
@@ -52,27 +67,37 @@ async fn view_raw(State(state): State<AppState>, Path(id): Path<String>) -> impl
     let content = state.client.get_string(format!("{URL}/raw/{id}").as_str());
 
     match content {
-        Ok(content) => Response::builder()
+        Ok(content) => match Response::builder()
             .status(200)
             .header("Content-Type", "text/plain")
             .body(Body::from(content))
-            .unwrap(),
+        {
+            Ok(response) => response,
+            Err(e) => error::render_error(PasteError::new(
+                500,
+                format!("Failed to build response: {}", e),
+                ErrorSource::Internal,
+            )),
+        },
         Err(err) => error::construct_error(err),
     }
 }
 
-async fn view_json(State(state): State<AppState>, Path(id): Path<String>) -> Json<Paste> {
-    let dom = state.client.get_html(format!("{URL}/{id}").as_str()).unwrap(); // fix
-    let paste = Paste::from_html(&dom);
-
-    Json(paste)
+async fn view_json(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    match state.client.get_html(format!("{URL}/{id}").as_str()) {
+        Ok(dom) => {
+            let paste = Paste::from_html(&dom);
+            Json(paste).into_response()
+        }
+        Err(err) => error::construct_error(err),
+    }
 }
 
 async fn view_download(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let content = state.client.get_string(format!("{URL}/raw/{id}").as_str());
 
     match content {
-        Ok(content) => Response::builder()
+        Ok(content) => match Response::builder()
             .status(200)
             .header("Content-Type", "text/plain")
             .header(
@@ -80,7 +105,14 @@ async fn view_download(State(state): State<AppState>, Path(id): Path<String>) ->
                 format!("attachment; filename=\"{id}.txt\""),
             )
             .body(Body::from(content))
-            .unwrap(),
+        {
+            Ok(response) => response,
+            Err(e) => error::render_error(PasteError::new(
+                500,
+                format!("Failed to build download response: {}", e),
+                ErrorSource::Internal,
+            )),
+        },
         Err(err) => error::construct_error(err),
     }
 }
@@ -89,18 +121,16 @@ async fn view_print(State(state): State<AppState>, Path(id): Path<String>) -> im
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
 
     match dom {
-        Ok(dom) => Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::from(
-                TEMPLATES
-                    .render(
-                        "print.html",
-                        &Context::from_serialize(Paste::from_html(&dom)).unwrap(),
-                    )
-                    .unwrap(),
-            ))
-            .unwrap(),
+        Ok(dom) => {
+            let paste = Paste::from_html(&dom);
+            match safe_render_template("print.html", &paste) {
+                Ok(rendered) => match create_html_response(rendered, 200) {
+                    Ok(response) => response,
+                    Err(app_err) => error::render_error(PasteError::from(app_err)),
+                },
+                Err(app_err) => error::render_error(PasteError::from(app_err)),
+            }
+        }
         Err(err) => error::construct_error(err),
     }
 }
@@ -109,51 +139,56 @@ async fn view_clone(State(state): State<AppState>, Path(id): Path<String>) -> im
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
 
     match dom {
-        Ok(dom) => Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::from(
-                TEMPLATES
-                    .render(
-                        "post.html",
-                        &Context::from_serialize(Paste::from_html(&dom)).unwrap(),
-                    )
-                    .unwrap(),
-            ))
-            .unwrap(),
+        Ok(dom) => {
+            let paste = Paste::from_html(&dom);
+            match safe_render_template("post.html", &paste) {
+                Ok(rendered) => match create_html_response(rendered, 200) {
+                    Ok(response) => response,
+                    Err(app_err) => error::render_error(PasteError::from(app_err)),
+                },
+                Err(app_err) => error::render_error(PasteError::from(app_err)),
+            }
+        }
         Err(err) => error::construct_error(err),
     }
 }
 
 async fn view_embed(Path(id): Path<String>) -> impl IntoResponse {
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        .body(Body::from(
-            TEMPLATES
-                .render("embed.html", &Context::from_serialize(Page { id }).unwrap())
-                .unwrap(),
-        ))
-        .unwrap()
+    let page = Page { id };
+    match safe_render_template("embed.html", &page) {
+        Ok(rendered) => match create_html_response(rendered, 200) {
+            Ok(response) => response,
+            Err(app_err) => error::render_error(PasteError::from(app_err)),
+        },
+        Err(app_err) => error::render_error(PasteError::from(app_err)),
+    }
 }
 
 async fn view_embed_js(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
 
     match dom {
-        Ok(dom) => Response::builder()
-            .status(200)
-            .header("Content-Type", "text/javascript")
-            .body(Body::from(format!(
-                "document.write('{}');",
-                TEMPLATES
-                    .render(
-                        "embed_iframe.html",
-                        &Context::from_serialize(Paste::from_html(&dom)).unwrap()
-                    )
-                    .unwrap()
-            )))
-            .unwrap(),
+        Ok(dom) => {
+            let paste = Paste::from_html(&dom);
+            match safe_render_template("embed_iframe.html", &paste) {
+                Ok(rendered) => {
+                    let js_content = format!("document.write('{}');", rendered.replace('\'', "\\'"));
+                    match Response::builder()
+                        .status(200)
+                        .header("Content-Type", "text/javascript")
+                        .body(Body::from(js_content))
+                    {
+                        Ok(response) => response,
+                        Err(e) => error::render_error(PasteError::new(
+                            500,
+                            format!("Failed to build JS response: {}", e),
+                            ErrorSource::Internal,
+                        )),
+                    }
+                }
+                Err(app_err) => error::render_error(PasteError::from(app_err)),
+            }
+        }
         Err(err) => error::construct_error(err),
     }
 }
@@ -165,18 +200,16 @@ async fn view_embed_iframe(
     let dom = state.client.get_html(format!("{URL}/{id}").as_str());
 
     match dom {
-        Ok(dom) => Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::from(
-                TEMPLATES
-                    .render(
-                        "embed_iframe.html",
-                        &Context::from_serialize(Paste::from_html(&dom)).unwrap(),
-                    )
-                    .unwrap(),
-            ))
-            .unwrap(),
+        Ok(dom) => {
+            let paste = Paste::from_html(&dom);
+            match safe_render_template("embed_iframe.html", &paste) {
+                Ok(rendered) => match create_html_response(rendered, 200) {
+                    Ok(response) => response,
+                    Err(app_err) => error::render_error(PasteError::from(app_err)),
+                },
+                Err(app_err) => error::render_error(PasteError::from(app_err)),
+            }
+        }
         Err(err) => error::construct_error(err),
     }
 }
@@ -186,19 +219,16 @@ async fn view_locked(
     Path(id): Path<String>,
     Form(data): Form<Unlock>,
 ) -> impl IntoResponse {
-    let csrf = state.client.get_html(format!("{URL}/{id}").as_str());
-
-    if csrf.is_err() {
-        return error::construct_error(csrf.err().unwrap());
-    }
-
-    let csrf = paste::get_csrftoken(&csrf.unwrap());
+    let csrf = match state.client.get_html(format!("{URL}/{id}").as_str()) {
+        Ok(dom) => paste::get_csrftoken(&dom),
+        Err(err) => return error::construct_error(err),
+    };
 
     let form = vec![
         ("_csrf-frontend".to_string(), csrf),
         (
             "PostPasswordVerificationForm[password]".to_string(),
-            data.password.unwrap_or("".to_owned()),
+            data.password.unwrap_or_default(),
         ),
         ("is_burn".to_string(), "1".to_string()),
     ];
@@ -206,56 +236,51 @@ async fn view_locked(
     let dom = state.client.post_html(format!("{URL}/{id}").as_str(), form);
 
     match dom {
-        Ok(dom) => Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html")
-            .body(Body::from(
-                TEMPLATES
-                    .render(
-                        "view.html",
-                        &Context::from_serialize(Paste::from_html(&dom)).unwrap(),
-                    )
-                    .unwrap(),
-            ))
-            .unwrap(),
+        Ok(dom) => {
+            let paste = Paste::from_html(&dom);
+            match safe_render_template("view.html", &paste) {
+                Ok(rendered) => match create_html_response(rendered, 200) {
+                    Ok(response) => response,
+                    Err(app_err) => error::render_error(PasteError::from(app_err)),
+                },
+                Err(app_err) => error::render_error(PasteError::from(app_err)),
+            }
+        }
         Err(err) => error::construct_error(err),
     }
 }
 
 async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
-    let dom = state.client.get_html(format!("{URL}/{id}").as_str());
-
-    if dom.is_err() {
-        return error::construct_error(dom.err().unwrap());
-    }
-
-    let dom = dom.unwrap();
-
-    let rendered = if paste::is_locked(&dom) {
-        TEMPLATES
-            .render(
-                "locked.html",
-                &Context::from_serialize(LockScreen {
-                    id,
-                    burn: paste::is_burn(&dom),
-                })
-                .unwrap(),
-            )
-            .unwrap()
-    } else if paste::is_burn(&dom) {
-        TEMPLATES
-            .render("burn.html", &Context::from_serialize(Page { id }).unwrap())
-            .unwrap()
-    } else {
-        let paste = Paste::from_html(&dom);
-        TEMPLATES
-            .render("view.html", &Context::from_serialize(paste).unwrap())
-            .unwrap()
+    let dom = match state.client.get_html(format!("{URL}/{id}").as_str()) {
+        Ok(dom) => dom,
+        Err(err) => return error::construct_error(err),
     };
 
-    Response::builder()
-        .status(200)
-        .header("Content-Type", "text/html")
-        .body(Body::from(rendered))
-        .unwrap()
+    let rendered = if paste::is_locked(&dom) {
+        let lock_screen = LockScreen {
+            id,
+            burn: paste::is_burn(&dom),
+        };
+        match safe_render_template("locked.html", &lock_screen) {
+            Ok(content) => content,
+            Err(app_err) => return error::render_error(PasteError::from(app_err)),
+        }
+    } else if paste::is_burn(&dom) {
+        let page = Page { id };
+        match safe_render_template("burn.html", &page) {
+            Ok(content) => content,
+            Err(app_err) => return error::render_error(PasteError::from(app_err)),
+        }
+    } else {
+        let paste = Paste::from_html(&dom);
+        match safe_render_template("view.html", &paste) {
+            Ok(content) => content,
+            Err(app_err) => return error::render_error(PasteError::from(app_err)),
+        }
+    };
+
+    match create_html_response(rendered, 200) {
+        Ok(response) => response,
+        Err(app_err) => error::render_error(PasteError::from(app_err)),
+    }
 }

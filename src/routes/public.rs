@@ -75,25 +75,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_favicon_png() {
-        let response = favicon_png().await.unwrap();
-        assert_eq!(response.into_response().status(), 200);
+        match favicon_png().await {
+            Ok(response) => assert_eq!(response.into_response().status(), 200),
+            Err(_) => panic!("favicon_png should not fail"),
+        }
     }
 
     #[tokio::test]
     async fn test_favicon_ico() {
-        let response = favicon_ico().await.unwrap();
-        assert_eq!(response.into_response().status(), 200);
+        match favicon_ico().await {
+            Ok(response) => assert_eq!(response.into_response().status(), 200),
+            Err(_) => panic!("favicon_ico should not fail"),
+        }
     }
 
     #[tokio::test]
     async fn test_manifest() {
-        let response = manifest().await.unwrap();
-        assert_eq!(response.into_response().status(), 200);
+        match manifest().await {
+            Ok(response) => assert_eq!(response.into_response().status(), 200),
+            Err(_) => panic!("manifest should not fail"),
+        }
     }
 
     #[tokio::test]
     async fn test_robots() {
-        let response = robots().await.unwrap();
-        assert_eq!(response.into_response().status(), 200);
+        match robots().await {
+            Ok(response) => assert_eq!(response.into_response().status(), 200),
+            Err(_) => panic!("robots should not fail"),
+        }
     }
 }

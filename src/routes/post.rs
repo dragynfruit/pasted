@@ -35,7 +35,13 @@ async fn post() -> Result<Response<Body>, Response<Body>> {
                 .header("Content-Type", "text/html")
                 .header("Cache-Control", "public, max-age=31536000, immutable")
                 .body(Body::new(html))
-                .unwrap()
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to build post response: {}", e);
+                    Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::from("Internal server error"))
+                        .unwrap()
+                })
         })
         .map_err(|e| render_error(Error::from(e)))
 }
@@ -91,7 +97,13 @@ async fn post_create(
             ))
         })?
         .to_str()
-        .unwrap()
+        .map_err(|e| {
+            render_error(Error::new(
+                StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                format!("Invalid Location header encoding: {}", e),
+                ErrorSource::Internal,
+            ))
+        })?
         .split("/")
         .last()
         .ok_or_else(|| {
@@ -107,5 +119,11 @@ async fn post_create(
         .header("Location", format!("/{paste_id}"))
         .header("Content-Type", "text/html")
         .body(Body::empty())
-        .unwrap())
+        .map_err(|e| {
+            render_error(Error::new(
+                StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                format!("Failed to build redirect response: {}", e),
+                ErrorSource::Internal,
+            ))
+        })?)
 }

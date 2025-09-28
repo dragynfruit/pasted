@@ -13,7 +13,22 @@ use crate::{
     templates::TEMPLATES,
 };
 
-use super::error::{self, render_error, Error};
+use super::error::{self, render_error, Error, ErrorSource, AppError};
+
+// Helper function to render templates safely
+fn safe_render_template<T: serde::Serialize>(template_name: &str, context: &T) -> Result<String, AppError> {
+    let ctx = Context::from_serialize(context).map_err(|e| AppError::Template(e))?;
+    TEMPLATES.render(template_name, &ctx).map_err(|e| AppError::Template(e))
+}
+
+// Helper function to create HTML responses
+fn create_html_response(content: String, status: u16) -> Result<Response<Body>, AppError> {
+    Response::builder()
+        .status(status)
+        .header("Content-Type", "text/html")
+        .body(Body::from(content))
+        .map_err(|e| AppError::Server(format!("Failed to build response: {}", e)))
+}
 
 pub fn get_router(state: AppState) -> Router {
     Router::new()
@@ -27,13 +42,12 @@ async fn user(State(state): State<AppState>, Path(username): Path<String>) -> im
     match dom {
         Ok(dom) => {
             let user = User::from_html(&dom);
-            match TEMPLATES.render("user.html", &Context::from_serialize(&user).unwrap() ) {
-                Ok(html) => Response::builder()
-                    .status(200)
-                    .header("Content-Type", "text/html")
-                    .body(Body::new(html))
-                    .unwrap(),
-                Err(err) => render_error(Error::from(err)),
+            match safe_render_template("user.html", &user) {
+                Ok(rendered) => match create_html_response(rendered, 200) {
+                    Ok(response) => response,
+                    Err(app_err) => render_error(Error::from(app_err)),
+                },
+                Err(app_err) => render_error(Error::from(app_err)),
             }
         }
         Err(err) => error::construct_error(err),
