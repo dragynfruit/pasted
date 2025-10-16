@@ -248,10 +248,7 @@ impl FromElement for SimpleUser {
             .select(&Selector::parse(&".username").unwrap())
             .next()
             .map(|el| el.text().collect::<String>().trim().to_owned())
-            .unwrap_or_else(|| {
-                eprintln!("Warning: .username element not found");
-                "unknown".to_string()
-            });
+            .unwrap_or_else(|| "unknown".to_string());
 
         let registered = parent
             .select(&Selector::parse(&".username>a").unwrap())
@@ -271,10 +268,7 @@ impl FromElement for SimpleUser {
                 src.replace("/themes/pastebin/img/", "/imgs/")
                     .replace("/cache/img/", "/imgs/")
             })
-            .unwrap_or_else(|| {
-                eprintln!("Warning: .user-icon>img element not found");
-                "/imgs/default_avatar.png".to_string()
-            });
+            .unwrap_or_else(|| "/imgs/default_avatar.png".to_string());
 
         SimpleUser {
             username,

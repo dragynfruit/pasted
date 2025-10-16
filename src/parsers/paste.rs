@@ -117,7 +117,7 @@ impl FromElement for Comment {
             .and_then(|el| el.attr("title"))
             .map(|date_str| safe_parse_date(date_str))
             .unwrap_or_else(|| {
-                eprintln!("Warning: date element not found in comment");
+                eprintln!("Warning: Comment date span element not found");
                 0
             });
 
@@ -142,7 +142,7 @@ impl FromElement for Comment {
             .next()
             .map(|el| PasteContainer::from_element(&el))
             .unwrap_or_else(|| {
-                eprintln!("Warning: .highlighted-code element not found in comment");
+                eprintln!("Warning: Comment .highlighted-code element not found");
                 PasteContainer {
                     category: None,
                     size: 0,
@@ -207,9 +207,9 @@ impl FromHtml for Paste {
             .next();
 
         let Some(parent) = parent else {
-            eprintln!("Warning: .post-view element not found in HTML");
+            eprintln!("Warning: Paste .post-view element not found in HTML");
             // Return a minimal Paste struct with default values
-            // We can't create SimpleUser directly, so we'll use a minimal HTML fragment
+            // Create a minimal HTML fragment to use for SimpleUser parsing
             let minimal_html = Html::parse_fragment("<div></div>");
             let minimal_element = minimal_html.root_element();
             
@@ -237,7 +237,7 @@ impl FromHtml for Paste {
                 unlisted: false,
                 num_comments: None,
                 comments: Vec::new(),
-                locked: true,
+                locked: false,
             };
         };
 
@@ -256,7 +256,7 @@ impl FromHtml for Paste {
             .next()
             .map(|el| PasteContainer::from_element(&el))
             .unwrap_or_else(|| {
-                eprintln!("Warning: .highlighted-code element not found");
+                eprintln!("Warning: Paste .highlighted-code element not found");
                 PasteContainer {
                     category: None,
                     size: 0,
@@ -277,7 +277,7 @@ impl FromHtml for Paste {
             .and_then(|el| el.attr("title"))
             .map(|date_str| safe_parse_date(date_str))
             .unwrap_or_else(|| {
-                eprintln!("Warning: date element not found");
+                eprintln!("Warning: Paste date span element not found");
                 0
             });
 
