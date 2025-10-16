@@ -125,30 +125,45 @@ impl FromHtml for User {
         let username = dom
             .select(&Selector::parse(&"meta[property='og:url']").unwrap())
             .next()
-            .unwrap()
-            .attr("content")
-            .unwrap()
-            .replace(&format!("{URL}/u/"), "");
+            .and_then(|el| el.attr("content"))
+            .map(|content| content.replace(&format!("{URL}/u/"), ""))
+            .unwrap_or_else(|| "unknown".to_string());
 
         let parent = dom
             .select(&Selector::parse(&".user-view").unwrap())
-            .next()
-            .unwrap();
+            .next();
+
+        // If parent is None, return a default User with minimal data
+        let Some(parent) = parent else {
+            eprintln!("Warning: .user-view element not found in HTML");
+            return User {
+                username,
+                icon_url: "/imgs/default_avatar.png".to_string(),
+                website: None,
+                location: None,
+                profile_views: 0,
+                paste_views: 0,
+                rating: 0.0,
+                date_joined: 0,
+                pro: false,
+                pastes: Vec::new(),
+            };
+        };
 
         let icon_url = parent
             .select(&Selector::parse(&".user-icon>img").unwrap())
             .next()
-            .unwrap()
-            .value()
-            .attr("src")
-            .unwrap()
-            .replace("/themes/pastebin/img/", "/imgs/")
-            .replace("/cache/img/", "/imgs/");
+            .and_then(|el| el.value().attr("src"))
+            .map(|src| {
+                src.replace("/themes/pastebin/img/", "/imgs/")
+                    .replace("/cache/img/", "/imgs/")
+            })
+            .unwrap_or_else(|| "/imgs/default_avatar.png".to_string());
 
         let website = parent
             .select(&Selector::parse(&".web").unwrap())
             .next()
-            .map(|e| e.value().attr("href").unwrap().to_owned());
+            .and_then(|e| e.value().attr("href").map(|h| h.to_owned()));
 
         let location = parent
             .select(&Selector::parse(&".location").unwrap())
@@ -158,40 +173,39 @@ impl FromHtml for User {
         let profile_views = parent
             .select(&Selector::parse(&".views:not(.-all)").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+            .and_then(|el| {
+                el.text()
+                    .collect::<String>()
+                    .replace(",", "")
+                    .parse()
+                    .ok()
+            })
+            .unwrap_or(0);
 
         let paste_views = parent
             .select(&Selector::parse(&".views.-all").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+            .and_then(|el| {
+                el.text()
+                    .collect::<String>()
+                    .replace(",", "")
+                    .parse()
+                    .ok()
+            })
+            .unwrap_or(0);
 
         let rating = parent
             .select(&Selector::parse(&".rating").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .parse()
-            .unwrap();
+            .and_then(|el| el.text().collect::<String>().parse().ok())
+            .unwrap_or(0.0);
 
-        let date_joined = safe_parse_date(
-            parent
-                .select(&Selector::parse(&".date-text").unwrap())
-                .next()
-                .unwrap()
-                .attr("title")
-                .unwrap(),
-        );
+        let date_joined = parent
+            .select(&Selector::parse(&".date-text").unwrap())
+            .next()
+            .and_then(|el| el.attr("title"))
+            .map(|date_str| safe_parse_date(date_str))
+            .unwrap_or(0);
 
         let pro = parent
             .select(&Selector::parse(&".pro").unwrap())
@@ -233,11 +247,11 @@ impl FromElement for SimpleUser {
         let username = parent
             .select(&Selector::parse(&".username").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+            .map(|el| el.text().collect::<String>().trim().to_owned())
+            .unwrap_or_else(|| {
+                eprintln!("Warning: .username element not found");
+                "unknown".to_string()
+            });
 
         let registered = parent
             .select(&Selector::parse(&".username>a").unwrap())
@@ -252,13 +266,15 @@ impl FromElement for SimpleUser {
         let icon_url = parent
             .select(&Selector::parse(&".user-icon>img").unwrap())
             .next()
-            .unwrap()
-            .value()
-            .attr("src")
-            .unwrap()
-            .replace("/themes/pastebin/img/", "/imgs/")
-            .replace("/cache/img/", "/imgs/")
-            .to_owned();
+            .and_then(|el| el.value().attr("src"))
+            .map(|src| {
+                src.replace("/themes/pastebin/img/", "/imgs/")
+                    .replace("/cache/img/", "/imgs/")
+            })
+            .unwrap_or_else(|| {
+                eprintln!("Warning: .user-icon>img element not found");
+                "/imgs/default_avatar.png".to_string()
+            });
 
         SimpleUser {
             username,

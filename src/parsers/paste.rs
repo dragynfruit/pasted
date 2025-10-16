@@ -111,14 +111,15 @@ impl FromElement for Comment {
     fn from_element(parent: &ElementRef) -> Self {
         let author = SimpleUser::from_element(&parent);
 
-        let date = safe_parse_date(
-            &parent
-                .select(&Selector::parse(&".date>span").unwrap())
-                .next()
-                .unwrap()
-                .attr("title")
-                .unwrap(),
-        );
+        let date = parent
+            .select(&Selector::parse(&".date>span").unwrap())
+            .next()
+            .and_then(|el| el.attr("title"))
+            .map(|date_str| safe_parse_date(date_str))
+            .unwrap_or_else(|| {
+                eprintln!("Warning: date element not found in comment");
+                0
+            });
 
         let edit_date = parent
             .select(&Selector::parse(&".date>span:nth-child(2)").unwrap())
@@ -136,12 +137,23 @@ impl FromElement for Comment {
             })
             .flatten();
 
-        let container = PasteContainer::from_element(
-            &parent
-                .select(&Selector::parse(".highlighted-code").unwrap())
-                .next()
-                .unwrap(),
-        );
+        let container = parent
+            .select(&Selector::parse(".highlighted-code").unwrap())
+            .next()
+            .map(|el| PasteContainer::from_element(&el))
+            .unwrap_or_else(|| {
+                eprintln!("Warning: .highlighted-code element not found in comment");
+                PasteContainer {
+                    category: None,
+                    size: 0,
+                    likes: None,
+                    dislikes: None,
+                    id: None,
+                    format: "text".to_string(),
+                    format_name: "Plain Text".to_string(),
+                    content: String::new(),
+                }
+            });
 
         let num_comments = parent
             .select(&Selector::parse(&"a[href='#comments']").unwrap())
@@ -183,16 +195,51 @@ impl FromHtml for Paste {
         let id = dom
             .select(&Selector::parse(&"meta[property='og:url']").unwrap())
             .next()
-            .unwrap()
-            .attr("content")
-            .unwrap()
-            .replace(&format!("{URL}/"), "")
-            .to_owned();
+            .and_then(|el| el.attr("content"))
+            .map(|content| content.replace(&format!("{URL}/"), ""))
+            .unwrap_or_else(|| {
+                eprintln!("Warning: og:url meta tag not found");
+                "unknown".to_string()
+            });
 
         let parent = dom
             .select(&Selector::parse(".post-view").unwrap())
-            .next()
-            .unwrap();
+            .next();
+
+        let Some(parent) = parent else {
+            eprintln!("Warning: .post-view element not found in HTML");
+            // Return a minimal Paste struct with default values
+            // We can't create SimpleUser directly, so we'll use a minimal HTML fragment
+            let minimal_html = Html::parse_fragment("<div></div>");
+            let minimal_element = minimal_html.root_element();
+            
+            return Paste {
+                id,
+                title: None,
+                tags: Vec::new(),
+                container: PasteContainer {
+                    category: None,
+                    size: 0,
+                    likes: None,
+                    dislikes: None,
+                    id: None,
+                    format: "text".to_string(),
+                    format_name: "Plain Text".to_string(),
+                    content: String::new(),
+                },
+                author: SimpleUser::from_element(&minimal_element),
+                date: 0,
+                edit_date: None,
+                views: 0,
+                rating: 0.0,
+                expire: "Unknown".to_string(),
+                comment_for: None,
+                unlisted: false,
+                num_comments: None,
+                comments: Vec::new(),
+                locked: true,
+            };
+        };
 
         let title = parent
             .select(&Selector::parse(&".info-top>h1").unwrap())
@@ -204,23 +251,35 @@ impl FromHtml for Paste {
             .map(|el| el.text().collect::<String>().to_owned())
             .collect::<Vec<String>>();
 
-        let container = PasteContainer::from_element(
-            &parent
-                .select(&Selector::parse(".highlighted-code").unwrap())
-                .next()
-                .unwrap(),
-        );
+        let container = parent
+            .select(&Selector::parse(".highlighted-code").unwrap())
+            .next()
+            .map(|el| PasteContainer::from_element(&el))
+            .unwrap_or_else(|| {
+                eprintln!("Warning: .highlighted-code element not found");
+                PasteContainer {
+                    category: None,
+                    size: 0,
+                    likes: None,
+                    dislikes: None,
+                    id: None,
+                    format: "text".to_string(),
+                    format_name: "Plain Text".to_string(),
+                    content: String::new(),
+                }
+            });
 
         let author = SimpleUser::from_element(&parent);
 
-        let date = safe_parse_date(
-            &parent
-                .select(&Selector::parse(&".date>span").unwrap())
-                .next()
-                .unwrap()
-                .attr("title")
-                .unwrap(),
-        );
+        let date = parent
+            .select(&Selector::parse(&".date>span").unwrap())
+            .next()
+            .and_then(|el| el.attr("title"))
+            .map(|date_str| safe_parse_date(date_str))
+            .unwrap_or_else(|| {
+                eprintln!("Warning: date element not found");
+                0
+            });
 
         let edit_date = parent
             .select(&Selector::parse(&".date>span:nth-child(2)").unwrap())
@@ -241,32 +300,33 @@ impl FromHtml for Paste {
         let views = parent
             .select(&Selector::parse(&".visits").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+            .and_then(|el| {
+                el.text()
+                    .collect::<String>()
+                    .trim()
+                    .replace(",", "")
+                    .parse()
+                    .ok()
+            })
+            .unwrap_or(0);
 
         let rating = parent
             .select(&Selector::parse(&".rating").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .parse()
-            .unwrap();
+            .and_then(|el| {
+                el.text()
+                    .collect::<String>()
+                    .trim()
+                    .parse()
+                    .ok()
+            })
+            .unwrap_or(0.0);
 
         let expire = parent
             .select(&Selector::parse(&".expire").unwrap())
             .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+            .map(|el| el.text().collect::<String>().trim().to_owned())
+            .unwrap_or_else(|| "Unknown".to_string());
 
         let comment_for = parent
             .select(&Selector::parse(&".notice").unwrap())
@@ -279,18 +339,14 @@ impl FromHtml for Paste {
                     .trim()
                     == "This is comment for paste"
                 {
-                    Some(
-                        el.select(&Selector::parse("a").unwrap())
-                            .next()
-                            .unwrap()
-                            .attr("href")
-                            .unwrap()
-                            .replace("/", "")
-                            .split_once("#")
-                            .unwrap()
-                            .0
-                            .to_owned(),
-                    )
+                    el.select(&Selector::parse("a").unwrap())
+                        .next()
+                        .and_then(|a| a.attr("href"))
+                        .and_then(|href| {
+                            href.replace("/", "")
+                                .split_once("#")
+                                .map(|(id, _)| id.to_owned())
+                        })
                 } else {
                     None
                 }
