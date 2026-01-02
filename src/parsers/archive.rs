@@ -1,9 +1,25 @@
+use once_cell::sync::Lazy;
 use scraper::{ElementRef, Html, Selector};
 use serde::Serialize;
 
 use crate::constants::URL;
 
 use super::{FromElement, FromHtml};
+use super::utils::{safe_text_content, safe_attr_content, safe_select};
+
+// Pre-compiled selectors to avoid unwrap() calls
+static SELECTOR_META_OG_URL: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("meta[property='og:url']").expect("Valid CSS selector"));
+static SELECTOR_ARCHIVE_TABLE: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".archive-table").expect("Valid CSS selector"));
+static SELECTOR_MAINTABLE_TR: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".maintable>tbody>tr").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_1_A: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_2: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(2)").expect("Valid CSS selector"));
+static SELECTOR_TD_CHILD_3_A: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("td:nth-child(3)>a").expect("Valid CSS selector"));
 
 #[derive(Serialize)]
 pub struct Archive {
@@ -14,49 +30,23 @@ pub struct Archive {
 }
 
 impl FromElement for Archive {
-    fn from_element(parent: &ElementRef) -> Self {
-        let id = parent
-            .select(&Selector::parse(&"td:nth-child(1)>a").unwrap())
-            .next()
-            .unwrap()
-            .attr("href")
-            .unwrap()
-            .replace("/", "")
-            .to_owned();
+    fn from_element(parent: &ElementRef) -> Result<Self, String> {
+        let id_link = safe_select(parent, &SELECTOR_TD_CHILD_1_A);
+        let id = safe_attr_content(id_link, "href").replace("/", "");
 
-        let title = parent
-            .select(&Selector::parse(&"td:nth-child(1)>a").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+        let title = safe_text_content(id_link);
 
-        let age = parent
-            .select(&Selector::parse(&"td:nth-child(2)").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+        let age = safe_text_content(safe_select(parent, &SELECTOR_TD_CHILD_2));
 
-        let format = parent
-            .select(&Selector::parse(&"td:nth-child(3)>a").unwrap())
-            .next()
-            .unwrap()
-            .attr("href")
-            .unwrap()
-            .replace("/archive/", "")
-            .to_owned();
+        let format_link = safe_select(parent, &SELECTOR_TD_CHILD_3_A);
+        let format = safe_attr_content(format_link, "href").replace("/archive/", "");
 
-        Archive {
+        Ok(Archive {
             id,
             title,
             age,
             format,
-        }
+        })
     }
 }
 
@@ -67,30 +57,27 @@ pub struct ArchivePage {
 }
 
 impl FromHtml for ArchivePage {
-    fn from_html(dom: &Html) -> Self {
+    fn from_html(dom: &Html) -> Result<Self, String> {
+        let meta_element = dom.select(&SELECTOR_META_OG_URL).next();
         let format = none_if_empty(
-            dom.select(&Selector::parse(&"meta[property='og:url']").unwrap())
-                .next()
-                .unwrap()
-                .attr("content")
-                .unwrap()
+            safe_attr_content(meta_element, "content")
                 .replace(&format!("{URL}/archive"), "")
                 .replace("/", ""),
         );
 
-        let parent = dom
-            .select(&Selector::parse(&".archive-table").unwrap())
-            .next()
-            .unwrap();
+        let parent = dom.select(&SELECTOR_ARCHIVE_TABLE).next();
 
-        let archives = parent
-            .select(&Selector::parse(&".maintable>tbody>tr").unwrap())
-            .enumerate()
-            .filter(|&(i, _)| i != 0)
-            .map(|(_, v)| Archive::from_element(&v))
-            .collect::<Vec<Archive>>();
+        let archives = match parent {
+            Some(parent_elem) => parent_elem
+                .select(&SELECTOR_MAINTABLE_TR)
+                .enumerate()
+                .filter(|&(i, _)| i != 0)
+                .map(|(_, v)| Archive::from_element(&v))
+                .collect::<Result<Vec<Archive>, String>>()?,
+            None => Vec::new(),
+        };
 
-        ArchivePage { format, archives }
+        Ok(ArchivePage { format, archives })
     }
 }
 
@@ -99,5 +86,95 @@ fn none_if_empty(string: String) -> Option<String> {
         None
     } else {
         Some(string)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use scraper::{Html, Selector};
+
+    use super::*;
+
+    #[test]
+    fn test_parse_archive_with_missing_elements() {
+        // Test Archive::from_element with missing elements
+        let dom = Html::parse_document(
+            r#"
+            <html>
+            <body>
+            <table>
+            <tbody>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            </tbody>
+            </table>
+            </body>
+            </html>
+        "#,
+        );
+
+        let element = dom
+            .select(&Selector::parse("tr").unwrap())
+            .next()
+            .unwrap();
+
+        let archive = Archive::from_element(&element).expect("Should not error");
+
+        // Should not panic and should return default values
+        assert_eq!(archive.id, "");
+        assert_eq!(archive.title, "");
+        assert_eq!(archive.age, "");
+        assert_eq!(archive.format, "");
+    }
+
+    #[test]
+    fn test_parse_archive_page_with_missing_table() {
+        // Test ArchivePage::from_html with missing .archive-table
+        let dom = Html::parse_document(
+            r#"
+            <html>
+                <head>
+                    <meta property="og:url" content="https://pastebin.com/archive">
+                </head>
+                <body>
+                    <div>No archive table here</div>
+                </body>
+            </html>
+        "#,
+        );
+
+        let archive_page = ArchivePage::from_html(&dom).expect("Should not error");
+
+        // Should not panic and should return empty archives
+        assert_eq!(archive_page.format, None);
+        assert_eq!(archive_page.archives.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_archive_page_with_missing_meta() {
+        // Test ArchivePage::from_html with missing meta tag
+        let dom = Html::parse_document(
+            r#"
+            <html>
+                <body>
+                    <div class="archive-table">
+                        <table class="maintable">
+                            <tbody>
+                                <tr><th>Header</th></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </body>
+            </html>
+        "#,
+        );
+
+        let archive_page = ArchivePage::from_html(&dom).expect("Should not error");
+
+        // Should not panic
+        assert_eq!(archive_page.format, None);
     }
 }

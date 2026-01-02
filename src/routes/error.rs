@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    http::StatusCode,
+    http::{StatusCode, HeaderValue},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
@@ -204,6 +204,17 @@ impl From<tera::Error> for Error {
     }
 }
 
+/// Helper function to create a fallback error response without using unwrap
+pub fn create_fallback_response(message: &str) -> Response<Body> {
+    let mut response = Response::new(Body::from(message.to_string()));
+    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+    response.headers_mut().insert(
+        "Content-Type",
+        HeaderValue::from_static("text/html")
+    );
+    response
+}
+
 pub fn render_error(error: Error) -> Response<Body> {
     let context_result = Context::from_serialize(&error);
     let template_result = match context_result {
@@ -228,10 +239,7 @@ pub fn render_error(error: Error) -> Response<Body> {
         .body(Body::new(body))
         .unwrap_or_else(|err| {
             eprintln!("Failed to build error response: {}", err);
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from("Internal server error"))
-                .unwrap()
+            create_fallback_response("Internal server error")
         })
 }
 

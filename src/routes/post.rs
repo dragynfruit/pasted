@@ -6,7 +6,7 @@ use tera::Context;
 
 use crate::{constants::URL, parsers::paste, state::AppState, templates::TEMPLATES};
 
-use super::error::{self, Error, ErrorSource, render_error};
+use super::error::{self, Error, ErrorSource, render_error, create_fallback_response};
 
 #[derive(Deserialize)]
 struct Post {
@@ -37,10 +37,7 @@ async fn post() -> Result<Response<Body>, Response<Body>> {
                 .body(Body::new(html))
                 .unwrap_or_else(|e| {
                     eprintln!("Failed to build post response: {}", e);
-                    Response::builder()
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(Body::from("Internal server error"))
-                        .unwrap()
+                    create_fallback_response("Internal server error")
                 })
         })
         .map_err(|e| render_error(Error::from(e)))
@@ -55,7 +52,7 @@ async fn post_create(
         .get_html(format!("{URL}/").as_str())
         .map_err(|e| error::construct_error(e))?;
 
-    let csrf = paste::get_csrftoken(&csrf);
+    let csrf = paste::get_csrftoken(&csrf).unwrap_or_default();
 
     let form: Vec<(String, String)> = vec![
         ("_csrf-frontend".to_string(), csrf),

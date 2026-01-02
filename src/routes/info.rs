@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tera::Context;
 
-use super::error::{Error, render_error};
+use super::error::{Error, render_error, create_fallback_response};
 use crate::{state::AppState, templates::TEMPLATES};
 
 pub static DEPLOY_DATE: OnceLock<String> = OnceLock::new();
@@ -76,10 +76,7 @@ async fn info(State(state): State<AppState>) -> Result<Response<Body>, Response<
                 .body(Body::new(html))
                 .unwrap_or_else(|e| {
                     eprintln!("Failed to build info response: {}", e);
-                    Response::builder()
-                        .status(500)
-                        .body(Body::from("Internal server error"))
-                        .unwrap()
+                    create_fallback_response("Internal server error")
                 })
         })
         .map_err(|e| render_error(Error::from(e)))

@@ -1159,7 +1159,7 @@ dependencies = [
 
 [[package]]
 name = "pasted"
-version = "1.2.34"
+version = "1.2.35"
 dependencies = [
  "axum",
  "byte-unit",

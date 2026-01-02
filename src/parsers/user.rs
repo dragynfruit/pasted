@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::constants::URL;
 
 use super::{FromElement, FromHtml, parse_date};
+use super::utils::{safe_text_content, safe_attr_content, safe_select, safe_parse_number};
 
 // Helper function to safely parse dates with fallback to 0
 fn safe_parse_date(date_str: &str) -> i64 {
@@ -15,6 +16,32 @@ fn safe_parse_date(date_str: &str) -> i64 {
 }
 
 // Pre-compiled selectors to avoid unwrap() calls
+static SELECTOR_META_OG_URL: Lazy<Selector> =
+    Lazy::new(|| Selector::parse("meta[property='og:url']").expect("Valid CSS selector"));
+static SELECTOR_USER_VIEW: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".user-view").expect("Valid CSS selector"));
+static SELECTOR_USER_ICON_IMG: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".user-icon>img").expect("Valid CSS selector"));
+static SELECTOR_WEB: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".web").expect("Valid CSS selector"));
+static SELECTOR_LOCATION: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".location").expect("Valid CSS selector"));
+static SELECTOR_VIEWS_NOT_ALL: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".views:not(.-all)").expect("Valid CSS selector"));
+static SELECTOR_VIEWS_ALL: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".views.-all").expect("Valid CSS selector"));
+static SELECTOR_RATING: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".rating").expect("Valid CSS selector"));
+static SELECTOR_DATE_TEXT: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".date-text").expect("Valid CSS selector"));
+static SELECTOR_PRO: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".pro").expect("Valid CSS selector"));
+static SELECTOR_MAINTABLE_TR: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".maintable>tbody>tr").expect("Valid CSS selector"));
+static SELECTOR_USERNAME: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".username").expect("Valid CSS selector"));
+static SELECTOR_USERNAME_A: Lazy<Selector> =
+    Lazy::new(|| Selector::parse(".username>a").expect("Valid CSS selector"));
 static SELECTOR_TD_CHILD_1_A: Lazy<Selector> =
     Lazy::new(|| Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector"));
 static SELECTOR_TD_CHILD_2: Lazy<Selector> =
@@ -28,21 +55,6 @@ static SELECTOR_TD_CHILD_5: Lazy<Selector> =
 static SELECTOR_TD_CHILD_6_A: Lazy<Selector> =
     Lazy::new(|| Selector::parse("td:nth-child(6)>a").expect("Valid CSS selector"));
 
-// Helper function to safely get text content from an element
-fn safe_text_content(element: Option<ElementRef>) -> String {
-    element
-        .map(|e| e.text().collect::<String>().trim().to_owned())
-        .unwrap_or_default()
-}
-
-// Helper function to safely get an attribute from an element
-fn safe_attr_content(element: Option<ElementRef>, attr: &str) -> String {
-    element
-        .and_then(|el| el.value().attr(attr))
-        .unwrap_or_default()
-        .to_owned()
-}
-
 #[derive(Serialize)]
 pub struct UserPaste {
     id: String,
@@ -55,46 +67,28 @@ pub struct UserPaste {
 }
 
 impl FromElement for UserPaste {
-    fn from_element(parent: &ElementRef) -> Self {
-        let id_link = parent.select(&SELECTOR_TD_CHILD_1_A).next();
+    fn from_element(parent: &ElementRef) -> Result<Self, String> {
+        let id_link = safe_select(parent, &SELECTOR_TD_CHILD_1_A);
         let id = safe_attr_content(id_link, "href").replace("/", "");
 
         let title = safe_text_content(id_link);
 
-        let age = safe_text_content(parent.select(&SELECTOR_TD_CHILD_2).next());
+        let age = safe_text_content(safe_select(parent, &SELECTOR_TD_CHILD_2));
 
-        let expires = safe_text_content(parent.select(&SELECTOR_TD_CHILD_3).next());
+        let expires = safe_text_content(safe_select(parent, &SELECTOR_TD_CHILD_3));
 
-        let views = parent
-            .select(&SELECTOR_TD_CHILD_4)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .trim()
-                    .replace(",", "")
-                    .parse()
-                    .ok()
-            })
+        let views: u32 = safe_select(parent, &SELECTOR_TD_CHILD_4)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
             .unwrap_or(0);
 
-        let num_comments = parent
-            .select(&SELECTOR_TD_CHILD_5)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .trim()
-                    .replace(",", "")
-                    .parse()
-                    .ok()
-            })
+        let num_comments: u32 = safe_select(parent, &SELECTOR_TD_CHILD_5)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
             .unwrap_or(0);
 
-        let format = safe_attr_content(parent.select(&SELECTOR_TD_CHILD_6_A).next(), "href")
+        let format = safe_attr_content(safe_select(parent, &SELECTOR_TD_CHILD_6_A), "href")
             .replace("/archive/", "");
 
-        UserPaste {
+        Ok(UserPaste {
             id,
             title,
             age,
@@ -102,7 +96,7 @@ impl FromElement for UserPaste {
             views,
             num_comments,
             format,
-        }
+        })
     }
 }
 
@@ -121,91 +115,68 @@ pub struct User {
 }
 
 impl FromHtml for User {
-    fn from_html(dom: &Html) -> Self {
-        let username = dom
-            .select(&Selector::parse(&"meta[property='og:url']").unwrap())
-            .next()
-            .unwrap()
-            .attr("content")
-            .unwrap()
+    fn from_html(dom: &Html) -> Result<Self, String> {
+        let meta_element = dom.select(&SELECTOR_META_OG_URL).next();
+        let username = safe_attr_content(meta_element, "content")
             .replace(&format!("{URL}/u/"), "");
 
-        let parent = dom
-            .select(&Selector::parse(&".user-view").unwrap())
-            .next()
-            .unwrap();
+        let parent = match dom.select(&SELECTOR_USER_VIEW).next() {
+            Some(p) => p,
+            None => {
+                // Return default User if .user-view is not found
+                return Ok(User {
+                    username,
+                    icon_url: String::new(),
+                    website: None,
+                    location: None,
+                    profile_views: 0,
+                    paste_views: 0,
+                    rating: 0.0,
+                    date_joined: 0,
+                    pro: false,
+                    pastes: Vec::new(),
+                });
+            }
+        };
 
-        let icon_url = parent
-            .select(&Selector::parse(&".user-icon>img").unwrap())
-            .next()
-            .unwrap()
-            .value()
-            .attr("src")
-            .unwrap()
+        let icon_img = safe_select(&parent, &SELECTOR_USER_ICON_IMG);
+        let icon_url = safe_attr_content(icon_img, "src")
             .replace("/themes/pastebin/img/", "/imgs/")
             .replace("/cache/img/", "/imgs/");
 
-        let website = parent
-            .select(&Selector::parse(&".web").unwrap())
-            .next()
-            .map(|e| e.value().attr("href").unwrap().to_owned());
+        let website = safe_select(&parent, &SELECTOR_WEB)
+            .and_then(|e| e.value().attr("href").map(|s| s.to_owned()));
 
-        let location = parent
-            .select(&Selector::parse(&".location").unwrap())
-            .next()
+        let location = safe_select(&parent, &SELECTOR_LOCATION)
             .map(|e| e.text().collect::<String>());
 
-        let profile_views = parent
-            .select(&Selector::parse(&".views:not(.-all)").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+        let profile_views: u32 = safe_select(&parent, &SELECTOR_VIEWS_NOT_ALL)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
+            .unwrap_or(0);
 
-        let paste_views = parent
-            .select(&Selector::parse(&".views.-all").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .replace(",", "")
-            .parse()
-            .unwrap();
+        let paste_views: u32 = safe_select(&parent, &SELECTOR_VIEWS_ALL)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
+            .unwrap_or(0);
 
-        let rating = parent
-            .select(&Selector::parse(&".rating").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .parse()
-            .unwrap();
+        let rating: f32 = safe_select(&parent, &SELECTOR_RATING)
+            .and_then(|el| el.text().collect::<String>().parse().ok())
+            .unwrap_or(0.0);
 
-        let date_joined = safe_parse_date(
-            parent
-                .select(&Selector::parse(&".date-text").unwrap())
-                .next()
-                .unwrap()
-                .attr("title")
-                .unwrap(),
-        );
+        let date_joined = safe_select(&parent, &SELECTOR_DATE_TEXT)
+            .and_then(|el| el.value().attr("title"))
+            .map(|date_str| safe_parse_date(date_str))
+            .unwrap_or(0);
 
-        let pro = parent
-            .select(&Selector::parse(&".pro").unwrap())
-            .next()
-            .is_some();
+        let pro = safe_select(&parent, &SELECTOR_PRO).is_some();
 
         let pastes = dom
-            .select(&Selector::parse(&".maintable>tbody>tr").unwrap())
+            .select(&SELECTOR_MAINTABLE_TR)
             .enumerate()
             .filter(|&(i, _)| i != 0)
             .map(|(_, v)| UserPaste::from_element(&v))
-            .collect::<Vec<UserPaste>>();
+            .collect::<Result<Vec<UserPaste>, String>>()?;
 
-        User {
+        Ok(User {
             username,
             icon_url,
             website,
@@ -216,7 +187,7 @@ impl FromHtml for User {
             date_joined,
             pro,
             pastes,
-        }
+        })
     }
 }
 
@@ -229,43 +200,25 @@ pub struct SimpleUser {
 }
 
 impl FromElement for SimpleUser {
-    fn from_element(parent: &ElementRef) -> Self {
-        let username = parent
-            .select(&Selector::parse(&".username").unwrap())
-            .next()
-            .unwrap()
-            .text()
-            .collect::<String>()
-            .trim()
-            .to_owned();
+    fn from_element(parent: &ElementRef) -> Result<Self, String> {
+        let username_elem = safe_select(parent, &SELECTOR_USERNAME);
+        let username = safe_text_content(username_elem);
 
-        let registered = parent
-            .select(&Selector::parse(&".username>a").unwrap())
-            .next()
-            .is_some();
+        let registered = safe_select(parent, &SELECTOR_USERNAME_A).is_some();
 
-        let pro = parent
-            .select(&Selector::parse(&".pro").unwrap())
-            .next()
-            .is_some();
+        let pro = safe_select(parent, &SELECTOR_PRO).is_some();
 
-        let icon_url = parent
-            .select(&Selector::parse(&".user-icon>img").unwrap())
-            .next()
-            .unwrap()
-            .value()
-            .attr("src")
-            .unwrap()
+        let icon_img = safe_select(parent, &SELECTOR_USER_ICON_IMG);
+        let icon_url = safe_attr_content(icon_img, "src")
             .replace("/themes/pastebin/img/", "/imgs/")
-            .replace("/cache/img/", "/imgs/")
-            .to_owned();
+            .replace("/cache/img/", "/imgs/");
 
-        SimpleUser {
+        Ok(SimpleUser {
             username,
             registered,
             pro,
             icon_url,
-        }
+        })
     }
 }
 
@@ -295,11 +248,146 @@ mod tests {
             &dom.select(&Selector::parse(".user").unwrap())
                 .next()
                 .unwrap(),
-        );
+        )
+        .expect("Should not error");
 
         assert_eq!(user.username, "user");
         assert_eq!(user.registered, true);
         assert_eq!(user.pro, true);
         assert_eq!(user.icon_url, "/imgs/user.png");
+    }
+
+    #[test]
+    fn test_parse_simple_user_with_missing_username() {
+        // Test SimpleUser::from_element with missing .username element
+        let dom = Html::parse_document(
+            r#"
+            <div class="user">
+                <div class="user-icon">
+                    <img src="/themes/pastebin/img/user.png">
+                </div>
+            </div>
+        "#,
+        );
+
+        let element = dom
+            .select(&Selector::parse(".user").unwrap())
+            .next()
+            .unwrap();
+
+        let user = SimpleUser::from_element(&element).expect("Should not error");
+
+        // Should not panic and should return default values
+        assert_eq!(user.username, "");
+        assert_eq!(user.registered, false);
+        assert_eq!(user.icon_url, "/imgs/user.png");
+    }
+
+    #[test]
+    fn test_parse_simple_user_with_missing_icon() {
+        // Test SimpleUser::from_element with missing icon
+        let dom = Html::parse_document(
+            r#"
+            <div class="user">
+                <div class="username">
+                    <a href="/u/user">user</a>
+                </div>
+            </div>
+        "#,
+        );
+
+        let element = dom
+            .select(&Selector::parse(".user").unwrap())
+            .next()
+            .unwrap();
+
+        let user = SimpleUser::from_element(&element).expect("Should not error");
+
+        // Should not panic and should return default values
+        assert_eq!(user.username, "user");
+        assert_eq!(user.icon_url, "");
+    }
+
+    #[test]
+    fn test_parse_user_with_missing_user_view() {
+        // Test User::from_html with missing .user-view element
+        let dom = Html::parse_document(
+            r#"
+            <html>
+                <head>
+                    <meta property="og:url" content="https://pastebin.com/u/testuser">
+                </head>
+                <body>
+                    <div>No user view here</div>
+                </body>
+            </html>
+        "#,
+        );
+
+        let user = User::from_html(&dom).expect("Should not error");
+
+        // Should not panic and should return default values
+        assert_eq!(user.username, "testuser");
+        assert_eq!(user.icon_url, "");
+        assert_eq!(user.profile_views, 0);
+        assert_eq!(user.paste_views, 0);
+        assert_eq!(user.rating, 0.0);
+        assert_eq!(user.date_joined, 0);
+        assert_eq!(user.pro, false);
+        assert_eq!(user.pastes.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_user_with_missing_meta() {
+        // Test User::from_html with missing meta tag
+        let dom = Html::parse_document(
+            r#"
+            <html>
+                <body>
+                    <div class="user-view">
+                        <div class="user-icon">
+                            <img src="/themes/pastebin/img/user.png">
+                        </div>
+                    </div>
+                </body>
+            </html>
+        "#,
+        );
+
+        let user = User::from_html(&dom).expect("Should not error");
+
+        // Should not panic, username will be empty or default
+        assert_eq!(user.username, "");
+        assert_eq!(user.icon_url, "/imgs/user.png");
+    }
+
+    #[test]
+    fn test_parse_user_with_missing_stats() {
+        // Test User::from_html with missing profile stats
+        let dom = Html::parse_document(
+            r#"
+            <html>
+                <head>
+                    <meta property="og:url" content="https://pastebin.com/u/testuser">
+                </head>
+                <body>
+                    <div class="user-view">
+                        <div class="user-icon">
+                            <img src="/themes/pastebin/img/user.png">
+                        </div>
+                    </div>
+                </body>
+            </html>
+        "#,
+        );
+
+        let user = User::from_html(&dom).expect("Should not error");
+
+        // Should not panic and should use default values for missing stats
+        assert_eq!(user.username, "testuser");
+        assert_eq!(user.profile_views, 0);
+        assert_eq!(user.paste_views, 0);
+        assert_eq!(user.rating, 0.0);
+        assert_eq!(user.date_joined, 0);
     }
 }

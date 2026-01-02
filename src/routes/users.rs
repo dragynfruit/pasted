@@ -47,7 +47,14 @@ async fn user(State(state): State<AppState>, Path(username): Path<String>) -> im
     let dom = state.client.get_html(&format!("{URL}/u/{username}"));
     match dom {
         Ok(dom) => {
-            let user = User::from_html(&dom);
+            let user = match User::from_html(&dom) {
+                Ok(u) => u,
+                Err(e) => return render_error(Error::new(
+                    500,
+                    format!("Failed to parse user page: {}", e),
+                    error::ErrorSource::Internal,
+                )),
+            };
             match safe_render_template("user.html", &user) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,
@@ -69,6 +76,13 @@ async fn json_user(
         .get_html(&format!("{URL}/u/{username}"))
         .map_err(|e| error::construct_error(e))?;
 
-    let user = User::from_html(&dom);
+    let user = User::from_html(&dom)
+        .map_err(|e| {
+            error::render_error(error::Error::new(
+                500,
+                format!("Failed to parse user page: {}", e),
+                error::ErrorSource::Internal,
+            ))
+        })?;
     Ok(Json(user))
 }

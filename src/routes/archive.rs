@@ -59,7 +59,14 @@ async fn archive(State(state): State<AppState>, format: Option<Path<String>>) ->
 
     match dom {
         Ok(dom) => {
-            let archive_page = ArchivePage::from_html(&dom);
+            let archive_page = match ArchivePage::from_html(&dom) {
+                Ok(page) => page,
+                Err(e) => return error::render_error(PasteError::new(
+                    500,
+                    format!("Failed to parse archive page: {}", e),
+                    error::ErrorSource::Internal,
+                )),
+            };
             match safe_render_template("archive.html", &archive_page) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,
@@ -77,10 +84,14 @@ async fn archive_json(
     format: Option<Path<String>>,
 ) -> impl IntoResponse {
     match state.client.get_html(&get_url(format)) {
-        Ok(dom) => {
-            let archive_page = ArchivePage::from_html(&dom);
-            Json(archive_page).into_response()
-        }
+        Ok(dom) => match ArchivePage::from_html(&dom) {
+            Ok(archive_page) => Json(archive_page).into_response(),
+            Err(e) => error::render_error(error::Error::new(
+                500,
+                format!("Failed to parse archive page: {}", e),
+                error::ErrorSource::Internal,
+            )),
+        },
         Err(err) => error::construct_error(err),
     }
 }
