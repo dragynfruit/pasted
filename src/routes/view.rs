@@ -39,6 +39,17 @@ fn create_html_response(content: String, status: u16) -> Result<Response<Body>, 
         .map_err(|e| AppError::Server(format!("Failed to build response: {}", e)))
 }
 
+// Helper function to safely parse paste from HTML
+fn parse_paste_safe(dom: &scraper::Html) -> Result<Paste, Response<Body>> {
+    Paste::from_html(dom).map_err(|e| {
+        error::render_error(PasteError::new(
+            500,
+            format!("Failed to parse paste: {}", e),
+            ErrorSource::Internal,
+        ))
+    })
+}
+
 #[derive(Serialize)]
 struct Page {
     id: String,
@@ -92,7 +103,7 @@ async fn view_raw(State(state): State<AppState>, Path(id): Path<String>) -> impl
 async fn view_json(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
     match state.client.get_html(format!("{URL}/{id}").as_str()) {
         Ok(dom) => {
-            let paste = Paste::from_html(&dom);
+            let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
             Json(paste).into_response()
         }
         Err(err) => error::construct_error(err),
@@ -128,7 +139,7 @@ async fn view_print(State(state): State<AppState>, Path(id): Path<String>) -> im
 
     match dom {
         Ok(dom) => {
-            let paste = Paste::from_html(&dom);
+            let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
             match safe_render_template("print.html", &paste) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,
@@ -146,7 +157,7 @@ async fn view_clone(State(state): State<AppState>, Path(id): Path<String>) -> im
 
     match dom {
         Ok(dom) => {
-            let paste = Paste::from_html(&dom);
+            let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
             match safe_render_template("post.html", &paste) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,
@@ -175,7 +186,7 @@ async fn view_embed_js(State(state): State<AppState>, Path(id): Path<String>) ->
 
     match dom {
         Ok(dom) => {
-            let paste = Paste::from_html(&dom);
+            let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
             match safe_render_template("embed_iframe.html", &paste) {
                 Ok(rendered) => {
                     let js_content =
@@ -208,7 +219,7 @@ async fn view_embed_iframe(
 
     match dom {
         Ok(dom) => {
-            let paste = Paste::from_html(&dom);
+            let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
             match safe_render_template("embed_iframe.html", &paste) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,
@@ -227,7 +238,7 @@ async fn view_locked(
     Form(data): Form<Unlock>,
 ) -> impl IntoResponse {
     let csrf = match state.client.get_html(format!("{URL}/{id}").as_str()) {
-        Ok(dom) => paste::get_csrftoken(&dom),
+        Ok(dom) => paste::get_csrftoken(&dom).unwrap_or_default(),
         Err(err) => return error::construct_error(err),
     };
 
@@ -244,7 +255,7 @@ async fn view_locked(
 
     match dom {
         Ok(dom) => {
-            let paste = Paste::from_html(&dom);
+            let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
             match safe_render_template("view.html", &paste) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,
@@ -279,7 +290,7 @@ async fn view(State(state): State<AppState>, Path(id): Path<String>) -> impl Int
             Err(app_err) => return error::render_error(PasteError::from(app_err)),
         }
     } else {
-        let paste = Paste::from_html(&dom);
+        let paste = match parse_paste_safe(&dom) { Ok(p) => p, Err(e) => return e };
         match safe_render_template("view.html", &paste) {
             Ok(content) => content,
             Err(app_err) => return error::render_error(PasteError::from(app_err)),

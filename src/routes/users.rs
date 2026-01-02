@@ -69,6 +69,13 @@ async fn json_user(
         .get_html(&format!("{URL}/u/{username}"))
         .map_err(|e| error::construct_error(e))?;
 
-    let user = User::from_html(&dom);
+    let user = User::from_html(&dom)
+        .map_err(|e| {
+            error::render_error(error::Error::new(
+                500,
+                format!("Failed to parse user page: {}", e),
+                error::ErrorSource::Internal,
+            ))
+        })?;
     Ok(Json(user))
 }

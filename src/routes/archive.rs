@@ -77,10 +77,14 @@ async fn archive_json(
     format: Option<Path<String>>,
 ) -> impl IntoResponse {
     match state.client.get_html(&get_url(format)) {
-        Ok(dom) => {
-            let archive_page = ArchivePage::from_html(&dom);
-            Json(archive_page).into_response()
-        }
+        Ok(dom) => match ArchivePage::from_html(&dom) {
+            Ok(archive_page) => Json(archive_page).into_response(),
+            Err(e) => error::render_error(error::Error::new(
+                500,
+                format!("Failed to parse archive page: {}", e),
+                error::ErrorSource::Internal,
+            )),
+        },
         Err(err) => error::construct_error(err),
     }
 }

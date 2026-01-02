@@ -55,7 +55,7 @@ async fn post_create(
         .get_html(format!("{URL}/").as_str())
         .map_err(|e| error::construct_error(e))?;
 
-    let csrf = paste::get_csrftoken(&csrf);
+    let csrf = paste::get_csrftoken(&csrf).unwrap_or_default();
 
     let form: Vec<(String, String)> = vec![
         ("_csrf-frontend".to_string(), csrf),
