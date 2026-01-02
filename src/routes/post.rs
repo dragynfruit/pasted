@@ -6,7 +6,7 @@ use tera::Context;
 
 use crate::{constants::URL, parsers::paste, state::AppState, templates::TEMPLATES};
 
-use super::error::{self, Error, ErrorSource, render_error};
+use super::error::{self, Error, ErrorSource, render_error, create_fallback_response};
 
 #[derive(Deserialize)]
 struct Post {
@@ -37,10 +37,7 @@ async fn post() -> Result<Response<Body>, Response<Body>> {
                 .body(Body::new(html))
                 .unwrap_or_else(|e| {
                     eprintln!("Failed to build post response: {}", e);
-                    // Final fallback - construct response manually
-                    let mut response = Response::new(Body::from("Internal server error"));
-                    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                    response
+                    create_fallback_response("Internal server error")
                 })
         })
         .map_err(|e| render_error(Error::from(e)))

@@ -1,9 +1,9 @@
-use axum::{Json, Router, body::Body, extract::State, http::StatusCode, response::Response, routing};
+use axum::{Json, Router, body::Body, extract::State, response::Response, routing};
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tera::Context;
 
-use super::error::{Error, render_error};
+use super::error::{Error, render_error, create_fallback_response};
 use crate::{state::AppState, templates::TEMPLATES};
 
 pub static DEPLOY_DATE: OnceLock<String> = OnceLock::new();
@@ -76,10 +76,7 @@ async fn info(State(state): State<AppState>) -> Result<Response<Body>, Response<
                 .body(Body::new(html))
                 .unwrap_or_else(|e| {
                     eprintln!("Failed to build info response: {}", e);
-                    // Final fallback - construct response manually
-                    let mut response = Response::new(Body::from("Internal server error"));
-                    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                    response
+                    create_fallback_response("Internal server error")
                 })
         })
         .map_err(|e| render_error(Error::from(e)))
