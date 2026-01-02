@@ -59,7 +59,14 @@ async fn archive(State(state): State<AppState>, format: Option<Path<String>>) ->
 
     match dom {
         Ok(dom) => {
-            let archive_page = ArchivePage::from_html(&dom);
+            let archive_page = match ArchivePage::from_html(&dom) {
+                Ok(page) => page,
+                Err(e) => return error::render_error(PasteError::new(
+                    500,
+                    format!("Failed to parse archive page: {}", e),
+                    error::ErrorSource::Internal,
+                )),
+            };
             match safe_render_template("archive.html", &archive_page) {
                 Ok(rendered) => match create_html_response(rendered, 200) {
                     Ok(response) => response,

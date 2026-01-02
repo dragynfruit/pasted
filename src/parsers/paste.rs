@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::constants::URL;
 
 use super::{FromElement, FromHtml, parse_date, user::SimpleUser};
-use super::utils::{safe_text_content, safe_attr_content, safe_select, safe_parse_number};
+use super::utils::{safe_attr_content, safe_select, safe_parse_number};
 
 // Helper function to safely parse dates with fallback to 0
 fn safe_parse_date(date_str: &str) -> i64 {

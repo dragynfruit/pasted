@@ -228,10 +228,14 @@ pub fn render_error(error: Error) -> Response<Body> {
         .body(Body::new(body))
         .unwrap_or_else(|err| {
             eprintln!("Failed to build error response: {}", err);
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from("Internal server error"))
-                .unwrap()
+            // Final fallback - construct response manually without builder
+            let mut response = Response::new(Body::from("Internal server error"));
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            // Only add header if parsing succeeds
+            if let Ok(header_value) = "text/html".parse() {
+                response.headers_mut().insert("Content-Type", header_value);
+            }
+            response
         })
 }
 

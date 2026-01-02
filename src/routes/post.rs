@@ -37,10 +37,10 @@ async fn post() -> Result<Response<Body>, Response<Body>> {
                 .body(Body::new(html))
                 .unwrap_or_else(|e| {
                     eprintln!("Failed to build post response: {}", e);
-                    Response::builder()
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(Body::from("Internal server error"))
-                        .unwrap()
+                    // Final fallback - construct response manually
+                    let mut response = Response::new(Body::from("Internal server error"));
+                    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                    response
                 })
         })
         .map_err(|e| render_error(Error::from(e)))
