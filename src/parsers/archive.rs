@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::constants::URL;
 
 use super::{FromElement, FromHtml};
+use super::utils::{safe_text_content, safe_attr_content, safe_select};
 
 // Pre-compiled selectors to avoid unwrap() calls
 static SELECTOR_META_OG_URL: Lazy<Selector> =
@@ -20,21 +21,6 @@ static SELECTOR_TD_CHILD_2: Lazy<Selector> =
 static SELECTOR_TD_CHILD_3_A: Lazy<Selector> =
     Lazy::new(|| Selector::parse("td:nth-child(3)>a").expect("Valid CSS selector"));
 
-// Helper function to safely get text content from an element
-fn safe_text_content(element: Option<ElementRef>) -> String {
-    element
-        .map(|e| e.text().collect::<String>().trim().to_owned())
-        .unwrap_or_default()
-}
-
-// Helper function to safely get an attribute from an element
-fn safe_attr_content(element: Option<ElementRef>, attr: &str) -> String {
-    element
-        .and_then(|el| el.value().attr(attr))
-        .unwrap_or_default()
-        .to_owned()
-}
-
 #[derive(Serialize)]
 pub struct Archive {
     id: String,
@@ -44,23 +30,23 @@ pub struct Archive {
 }
 
 impl FromElement for Archive {
-    fn from_element(parent: &ElementRef) -> Self {
-        let id_link = parent.select(&SELECTOR_TD_CHILD_1_A).next();
+    fn from_element(parent: &ElementRef) -> Result<Self, String> {
+        let id_link = safe_select(parent, &SELECTOR_TD_CHILD_1_A);
         let id = safe_attr_content(id_link, "href").replace("/", "");
 
         let title = safe_text_content(id_link);
 
-        let age = safe_text_content(parent.select(&SELECTOR_TD_CHILD_2).next());
+        let age = safe_text_content(safe_select(parent, &SELECTOR_TD_CHILD_2));
 
-        let format_link = parent.select(&SELECTOR_TD_CHILD_3_A).next();
+        let format_link = safe_select(parent, &SELECTOR_TD_CHILD_3_A);
         let format = safe_attr_content(format_link, "href").replace("/archive/", "");
 
-        Archive {
+        Ok(Archive {
             id,
             title,
             age,
             format,
-        }
+        })
     }
 }
 
@@ -71,7 +57,7 @@ pub struct ArchivePage {
 }
 
 impl FromHtml for ArchivePage {
-    fn from_html(dom: &Html) -> Self {
+    fn from_html(dom: &Html) -> Result<Self, String> {
         let meta_element = dom.select(&SELECTOR_META_OG_URL).next();
         let format = none_if_empty(
             safe_attr_content(meta_element, "content")
@@ -87,11 +73,11 @@ impl FromHtml for ArchivePage {
                 .enumerate()
                 .filter(|&(i, _)| i != 0)
                 .map(|(_, v)| Archive::from_element(&v))
-                .collect::<Vec<Archive>>(),
+                .collect::<Result<Vec<Archive>, String>>()?,
             None => Vec::new(),
         };
 
-        ArchivePage { format, archives }
+        Ok(ArchivePage { format, archives })
     }
 }
 
@@ -135,7 +121,7 @@ mod tests {
             .next()
             .unwrap();
 
-        let archive = Archive::from_element(&element);
+        let archive = Archive::from_element(&element).expect("Should not error");
 
         // Should not panic and should return default values
         assert_eq!(archive.id, "");
@@ -160,7 +146,7 @@ mod tests {
         "#,
         );
 
-        let archive_page = ArchivePage::from_html(&dom);
+        let archive_page = ArchivePage::from_html(&dom).expect("Should not error");
 
         // Should not panic and should return empty archives
         assert_eq!(archive_page.format, None);
@@ -186,7 +172,7 @@ mod tests {
         "#,
         );
 
-        let archive_page = ArchivePage::from_html(&dom);
+        let archive_page = ArchivePage::from_html(&dom).expect("Should not error");
 
         // Should not panic
         assert_eq!(archive_page.format, None);

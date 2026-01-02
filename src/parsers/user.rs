@@ -5,69 +5,55 @@ use serde::Serialize;
 use crate::constants::URL;
 
 use super::{FromElement, FromHtml, parse_date};
+use super::utils::{safe_text_content, safe_attr_content, safe_select, safe_parse_number};
 
 // Helper function to safely parse dates with fallback to 0
 fn safe_parse_date(date_str: &str) -> i64 {
     parse_date(date_str).unwrap_or_else(|e| {
-        eprintln!("Failed to parse date '{}': {}", date_str, e);
+        eprintln!("Failed to parse date '{}': {}", date_str, e).expect("Should not error");
         0 // Unix epoch as fallback
     })
 }
 
 // Pre-compiled selectors to avoid unwrap() calls
 static SELECTOR_META_OG_URL: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("meta[property='og:url']").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse("meta[property='og:url']").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_USER_VIEW: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".user-view").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".user-view").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_USER_ICON_IMG: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".user-icon>img").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".user-icon>img").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_WEB: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".web").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".web").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_LOCATION: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".location").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".location").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_VIEWS_NOT_ALL: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".views:not(.-all)").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".views:not(.-all)").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_VIEWS_ALL: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".views.-all").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".views.-all").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_RATING: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".rating").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".rating").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_DATE_TEXT: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".date-text").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".date-text").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_PRO: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".pro").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".pro").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_MAINTABLE_TR: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".maintable>tbody>tr").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".maintable>tbody>tr").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_USERNAME: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".username").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".username").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_USERNAME_A: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(".username>a").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse(".username>a").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_TD_CHILD_1_A: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse("td:nth-child(1)>a").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_TD_CHILD_2: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("td:nth-child(2)").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse("td:nth-child(2)").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_TD_CHILD_3: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("td:nth-child(3)").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse("td:nth-child(3)").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_TD_CHILD_4: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("td:nth-child(4)").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse("td:nth-child(4)").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_TD_CHILD_5: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("td:nth-child(5)").expect("Valid CSS selector"));
+    Lazy::new(|| Selector::parse("td:nth-child(5)").expect("Valid CSS selector")).expect("Should not error");
 static SELECTOR_TD_CHILD_6_A: Lazy<Selector> =
-    Lazy::new(|| Selector::parse("td:nth-child(6)>a").expect("Valid CSS selector"));
-
-// Helper function to safely get text content from an element
-fn safe_text_content(element: Option<ElementRef>) -> String {
-    element
-        .map(|e| e.text().collect::<String>().trim().to_owned())
-        .unwrap_or_default()
-}
-
-// Helper function to safely get an attribute from an element
-fn safe_attr_content(element: Option<ElementRef>, attr: &str) -> String {
-    element
-        .and_then(|el| el.value().attr(attr))
-        .unwrap_or_default()
-        .to_owned()
-}
+    Lazy::new(|| Selector::parse("td:nth-child(6)>a").expect("Valid CSS selector")).expect("Should not error");
 
 #[derive(Serialize)]
 pub struct UserPaste {
@@ -81,46 +67,28 @@ pub struct UserPaste {
 }
 
 impl FromElement for UserPaste {
-    fn from_element(parent: &ElementRef) -> Self {
-        let id_link = parent.select(&SELECTOR_TD_CHILD_1_A).next();
-        let id = safe_attr_content(id_link, "href").replace("/", "");
+    fn from_element(parent: &ElementRef) -> Result<Self, String> {
+        let id_link = safe_select(parent, &SELECTOR_TD_CHILD_1_A).expect("Should not error");
+        let id = safe_attr_content(id_link, "href").replace("/", "").expect("Should not error");
 
-        let title = safe_text_content(id_link);
+        let title = safe_text_content(id_link).expect("Should not error");
 
-        let age = safe_text_content(parent.select(&SELECTOR_TD_CHILD_2).next());
+        let age = safe_text_content(safe_select(parent, &SELECTOR_TD_CHILD_2)).expect("Should not error");
 
-        let expires = safe_text_content(parent.select(&SELECTOR_TD_CHILD_3).next());
+        let expires = safe_text_content(safe_select(parent, &SELECTOR_TD_CHILD_3)).expect("Should not error");
 
-        let views = parent
-            .select(&SELECTOR_TD_CHILD_4)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .trim()
-                    .replace(",", "")
-                    .parse()
-                    .ok()
-            })
-            .unwrap_or(0);
+        let views: u32 = safe_select(parent, &SELECTOR_TD_CHILD_4)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
+            .unwrap_or(0).expect("Should not error");
 
-        let num_comments = parent
-            .select(&SELECTOR_TD_CHILD_5)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .trim()
-                    .replace(",", "")
-                    .parse()
-                    .ok()
-            })
-            .unwrap_or(0);
+        let num_comments: u32 = safe_select(parent, &SELECTOR_TD_CHILD_5)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
+            .unwrap_or(0).expect("Should not error");
 
-        let format = safe_attr_content(parent.select(&SELECTOR_TD_CHILD_6_A).next(), "href")
-            .replace("/archive/", "");
+        let format = safe_attr_content(safe_select(parent, &SELECTOR_TD_CHILD_6_A), "href")
+            .replace("/archive/", "").expect("Should not error");
 
-        UserPaste {
+        Ok(UserPaste {
             id,
             title,
             age,
@@ -128,7 +96,7 @@ impl FromElement for UserPaste {
             views,
             num_comments,
             format,
-        }
+        })
     }
 }
 
@@ -147,16 +115,16 @@ pub struct User {
 }
 
 impl FromHtml for User {
-    fn from_html(dom: &Html) -> Self {
-        let meta_element = dom.select(&SELECTOR_META_OG_URL).next();
+    fn from_html(dom: &Html) -> Result<Self, String> {
+        let meta_element = dom.select(&SELECTOR_META_OG_URL).next().expect("Should not error");
         let username = safe_attr_content(meta_element, "content")
-            .replace(&format!("{URL}/u/"), "");
+            .replace(&format!("{URL}/u/"), "").expect("Should not error");
 
         let parent = match dom.select(&SELECTOR_USER_VIEW).next() {
             Some(p) => p,
             None => {
                 // Return default User if .user-view is not found
-                return User {
+                return Ok(User {
                     username,
                     icon_url: String::new(),
                     website: None,
@@ -167,80 +135,48 @@ impl FromHtml for User {
                     date_joined: 0,
                     pro: false,
                     pastes: Vec::new(),
-                };
+                }).expect("Should not error");
             }
         };
 
-        let icon_img = parent.select(&SELECTOR_USER_ICON_IMG).next();
+        let icon_img = safe_select(&parent, &SELECTOR_USER_ICON_IMG).expect("Should not error");
         let icon_url = safe_attr_content(icon_img, "src")
             .replace("/themes/pastebin/img/", "/imgs/")
-            .replace("/cache/img/", "/imgs/");
+            .replace("/cache/img/", "/imgs/").expect("Should not error");
 
-        let website = parent
-            .select(&SELECTOR_WEB)
-            .next()
-            .and_then(|e| e.value().attr("href").map(|s| s.to_owned()));
+        let website = safe_select(&parent, &SELECTOR_WEB)
+            .and_then(|e| e.value().attr("href").map(|s| s.to_owned())).expect("Should not error");
 
-        let location = parent
-            .select(&SELECTOR_LOCATION)
-            .next()
-            .map(|e| e.text().collect::<String>());
+        let location = safe_select(&parent, &SELECTOR_LOCATION)
+            .map(|e| e.text().collect::<String>()).expect("Should not error");
 
-        let profile_views = parent
-            .select(&SELECTOR_VIEWS_NOT_ALL)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .replace(",", "")
-                    .parse()
-                    .ok()
-            })
-            .unwrap_or(0);
+        let profile_views: u32 = safe_select(&parent, &SELECTOR_VIEWS_NOT_ALL)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
+            .unwrap_or(0).expect("Should not error");
 
-        let paste_views = parent
-            .select(&SELECTOR_VIEWS_ALL)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .replace(",", "")
-                    .parse()
-                    .ok()
-            })
-            .unwrap_or(0);
+        let paste_views: u32 = safe_select(&parent, &SELECTOR_VIEWS_ALL)
+            .map(|el| safe_parse_number(&el.text().collect::<String>()))
+            .unwrap_or(0).expect("Should not error");
 
-        let rating = parent
-            .select(&SELECTOR_RATING)
-            .next()
-            .and_then(|el| {
-                el.text()
-                    .collect::<String>()
-                    .parse()
-                    .ok()
-            })
-            .unwrap_or(0.0);
+        let rating: f32 = safe_select(&parent, &SELECTOR_RATING)
+            .and_then(|el| el.text().collect::<String>().parse().ok())
+            .unwrap_or(0.0).expect("Should not error");
 
-        let date_joined = parent
-            .select(&SELECTOR_DATE_TEXT)
-            .next()
+        let date_joined = safe_select(&parent, &SELECTOR_DATE_TEXT)
             .and_then(|el| el.value().attr("title"))
             .map(|date_str| safe_parse_date(date_str))
-            .unwrap_or(0);
+            .unwrap_or(0).expect("Should not error");
 
-        let pro = parent
-            .select(&SELECTOR_PRO)
-            .next()
-            .is_some();
+        let pro = safe_select(&parent, &SELECTOR_PRO).is_some().expect("Should not error");
 
         let pastes = dom
             .select(&SELECTOR_MAINTABLE_TR)
             .enumerate()
             .filter(|&(i, _)| i != 0)
             .map(|(_, v)| UserPaste::from_element(&v))
-            .collect::<Vec<UserPaste>>();
+            .collect::<Result<Vec<UserPaste>, String>>()?;
 
-        User {
+        Ok(User {
             username,
             icon_url,
             website,
@@ -251,7 +187,7 @@ impl FromHtml for User {
             date_joined,
             pro,
             pastes,
-        }
+        })
     }
 }
 
@@ -264,31 +200,25 @@ pub struct SimpleUser {
 }
 
 impl FromElement for SimpleUser {
-    fn from_element(parent: &ElementRef) -> Self {
-        let username_elem = parent.select(&SELECTOR_USERNAME).next();
-        let username = safe_text_content(username_elem);
+    fn from_element(parent: &ElementRef) -> Result<Self, String> {
+        let username_elem = safe_select(parent, &SELECTOR_USERNAME).expect("Should not error");
+        let username = safe_text_content(username_elem).expect("Should not error");
 
-        let registered = parent
-            .select(&SELECTOR_USERNAME_A)
-            .next()
-            .is_some();
+        let registered = safe_select(parent, &SELECTOR_USERNAME_A).is_some().expect("Should not error");
 
-        let pro = parent
-            .select(&SELECTOR_PRO)
-            .next()
-            .is_some();
+        let pro = safe_select(parent, &SELECTOR_PRO).is_some().expect("Should not error");
 
-        let icon_img = parent.select(&SELECTOR_USER_ICON_IMG).next();
+        let icon_img = safe_select(parent, &SELECTOR_USER_ICON_IMG).expect("Should not error");
         let icon_url = safe_attr_content(icon_img, "src")
             .replace("/themes/pastebin/img/", "/imgs/")
-            .replace("/cache/img/", "/imgs/");
+            .replace("/cache/img/", "/imgs/").expect("Should not error");
 
-        SimpleUser {
+        Ok(SimpleUser {
             username,
             registered,
             pro,
             icon_url,
-        }
+        })
     }
 }
 
@@ -318,7 +248,8 @@ mod tests {
             &dom.select(&Selector::parse(".user").unwrap())
                 .next()
                 .unwrap(),
-        );
+        )
+        .expect("Should not error");
 
         assert_eq!(user.username, "user");
         assert_eq!(user.registered, true);
@@ -344,7 +275,7 @@ mod tests {
             .next()
             .unwrap();
 
-        let user = SimpleUser::from_element(&element);
+        let user = SimpleUser::from_element(&element).expect("Should not error");
 
         // Should not panic and should return default values
         assert_eq!(user.username, "");
@@ -370,7 +301,7 @@ mod tests {
             .next()
             .unwrap();
 
-        let user = SimpleUser::from_element(&element);
+        let user = SimpleUser::from_element(&element).expect("Should not error");
 
         // Should not panic and should return default values
         assert_eq!(user.username, "user");
@@ -393,7 +324,7 @@ mod tests {
         "#,
         );
 
-        let user = User::from_html(&dom);
+        let user = User::from_html(&dom).expect("Should not error");
 
         // Should not panic and should return default values
         assert_eq!(user.username, "testuser");
@@ -423,7 +354,7 @@ mod tests {
         "#,
         );
 
-        let user = User::from_html(&dom);
+        let user = User::from_html(&dom).expect("Should not error");
 
         // Should not panic, username will be empty or default
         assert_eq!(user.username, "");
@@ -450,7 +381,7 @@ mod tests {
         "#,
         );
 
-        let user = User::from_html(&dom);
+        let user = User::from_html(&dom).expect("Should not error");
 
         // Should not panic and should use default values for missing stats
         assert_eq!(user.username, "testuser");
